@@ -66,7 +66,7 @@ public class Processor extends Task<Map<String, Float>> {
 
 					String name = r.getCell(CONCEPT_COLUMN).getStringCellValue();
 
-					Float parsed = Float.parseFloat(r.getCell(EXPENSES_COLUMN).getStringCellValue().replaceAll(",", ""));
+					Float parsed = getNumericValue(r.getCell(EXPENSES_COLUMN));
 					Float value = map.get(name);
 
 					value = value == null ? parsed : parsed + value;
@@ -104,6 +104,18 @@ public class Processor extends Task<Map<String, Float>> {
 			result = cell.getStringCellValue();
 		}
 
+		return result;
+	}
+	
+	private static Float getNumericValue(Cell cell) {
+		Float result = null;
+		
+		if(cell.getCellType() == CellType.NUMERIC) {
+			result = (float) cell.getNumericCellValue();
+		} else if (cell.getCellType() == CellType.STRING) {
+			result = Float.parseFloat(cell.getStringCellValue().replaceAll(",", ""));
+		}
+		
 		return result;
 	}
 

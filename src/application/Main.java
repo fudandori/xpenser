@@ -8,9 +8,13 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 
 import application.animation.AnimationTimer;
+import application.language.Language;
 import application.language.LanguageService;
 import application.process.Processor;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -20,6 +24,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
@@ -50,6 +55,10 @@ public class Main extends Application {
 	private String errorTite;
 	private String errorContent;
 
+	private ChoiceBox<Language> languageChoiceBox;
+
+	Language[] langs = { new Language("en", "English"), new Language("es", "Español") };
+
 	@Override
 	public void start(Stage primaryStage) {
 
@@ -66,7 +75,7 @@ public class Main extends Application {
 
 		initializeControls(primaryStage);
 
-		HBox hbox = new HBox(10d, selectFileButton, fileLabel);
+		HBox hbox = new HBox(10d, selectFileButton, fileLabel, languageChoiceBox);
 		hbox.setAlignment(Pos.CENTER_LEFT);
 
 		gridpane = new GridPane();
@@ -91,6 +100,20 @@ public class Main extends Application {
 
 		String locale = Locale.getDefault().getLanguage();
 		setLanguage(locale);
+
+		int index = -1;
+		boolean found = false;
+
+		for (int i = 0; i < langs.length && !found; i++) {
+			if (langs[i].getCode().equals(locale)) {
+				index = i;
+				found = true;
+			}
+		}
+
+		if (found) {
+			languageChoiceBox.getSelectionModel().select(index);
+		}
 
 		primaryStage.setTitle("For Aiur!");
 		primaryStage.setScene(scene);
@@ -150,9 +173,9 @@ public class Main extends Application {
 
 					@Override
 					public void handle(WorkerStateEvent event) {
-							Alert alert = new Alert(AlertType.ERROR);
-							alert.setContentText(errorContent);
-							alert.setTitle(errorTite);
+						Alert alert = new Alert(AlertType.ERROR);
+						alert.setContentText(errorContent);
+						alert.setTitle(errorTite);
 					}
 				});
 
@@ -168,6 +191,16 @@ public class Main extends Application {
 		startButton.setOnMouseClicked(startEvent);
 
 		fileLabel = new Label();
+
+		languageChoiceBox = new ChoiceBox<Language>(FXCollections.observableArrayList(langs));
+		languageChoiceBox.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
+
+			@Override
+			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+				setLanguage(langs[newValue.intValue()].getCode());
+			}
+
+		});
 	}
 
 	private void setLanguage(String lang) {
@@ -179,6 +212,7 @@ public class Main extends Application {
 			errorContent = translation.get("ERROR_BODY");
 			errorTite = translation.get("ERROR_TITLE");
 			fileLabel.setText(translation.get("SELECTED"));
+
 		} catch (IOException e) {
 			System.out.println("i18n error");
 		}
