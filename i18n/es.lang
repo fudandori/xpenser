@@ -3,3 +3,6 @@ START:Procesar
 ERROR_BODY:Error en el parseo de los datos. Asegúrese de que los parámetros son correctos.
 ERROR_TITLE:Error de procesamiento
 SELECTED:Ningún archivo seleccionado
+CHECKBOX:Vista mensual
+KEY:Concepto
+VALUE:Valor

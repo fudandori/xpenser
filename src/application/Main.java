@@ -2,14 +2,18 @@ package application;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
-import application.animation.AnimationTimer;
 import application.language.Language;
 import application.language.LanguageService;
+import application.process.MonthProcessor;
 import application.process.Processor;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
@@ -24,10 +28,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
@@ -39,59 +45,56 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class Main extends Application {
-
 	FileChooser fileChooser;
-
+	TabPane tabs = new TabPane();
 	private Button selectFileButton;
 	private Button startButton;
-
+	VBox main = new VBox(10d);
 	private Label fileLabel;
 	private File file;
 
-	private GridPane gridpane;
+	Insets padding = new Insets(10d);
+	private List<GridPane> grids = new ArrayList<>();
 
-	private ProgressBar progressBar;
+	// private ProgressBar progressBar;
 
 	private String errorTite;
 	private String errorContent;
 
 	private ChoiceBox<Language> languageChoiceBox;
 
+	private CheckBox checkBox;
+
+	private Label key;
+	private Label value;
+
 	Language[] langs = { new Language("en", "English"), new Language("es", "Español") };
+
+	double width;
 
 	@Override
 	public void start(Stage primaryStage) {
+		width = primaryStage.getWidth();
 
 		primaryStage.widthProperty().addListener((obs, oldVal, newVal) -> {
-			gridpane.getColumnConstraints().clear();
+			width = newVal.doubleValue();
 
-			ColumnConstraints c1 = new ColumnConstraints(newVal.doubleValue() / 2d - 50d);
-			ColumnConstraints c2 = new ColumnConstraints(newVal.doubleValue() / 2d - 50d);
-
-			gridpane.getColumnConstraints().addAll(c1, c2);
+			for (GridPane gridpane : grids) {
+				gridpane.getColumnConstraints().clear();
+				gridpane.getColumnConstraints().addAll(new ColumnConstraints(width / 2d - 25d));
+			}
 		});
-
-		Insets padding = new Insets(10d);
 
 		initializeControls(primaryStage);
 
-		HBox hbox = new HBox(10d, selectFileButton, fileLabel, languageChoiceBox);
+		HBox hbox = new HBox(10d, selectFileButton, fileLabel, languageChoiceBox, checkBox);
 		hbox.setAlignment(Pos.CENTER_LEFT);
 
-		gridpane = new GridPane();
-		gridpane.setHgap(10d);
-		gridpane.setVgap(10d);
+		tabs.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
 
-		ScrollPane scrollPane = new ScrollPane();
-		scrollPane.setContent(gridpane);
-		scrollPane.setPadding(padding);
+		// main.getChildren().add(tabs);
 
-		progressBar = new ProgressBar();
-		progressBar.setProgress(.75);
-		progressBar.setPrefWidth(750d);
-
-		VBox main = new VBox(10d);
-		main.getChildren().addAll(hbox, startButton, progressBar, scrollPane);
+		main.getChildren().addAll(hbox, startButton, new Label());
 		main.setPadding(padding);
 
 		Scene scene = new Scene(main, 800, 600);
@@ -127,6 +130,8 @@ public class Main extends Application {
 
 	private void initializeControls(Stage stage) {
 
+		checkBox = new CheckBox();
+
 		fileChooser = new FileChooser();
 		fileChooser.setTitle("Open Resource File");
 		fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xls", "*.xlsx"));
@@ -149,41 +154,60 @@ public class Main extends Application {
 
 		EventHandler<MouseEvent> startEvent = new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
-				Processor p = new Processor(file);
-				AnimationTimer fadeIn = new AnimationTimer(250);
+				if (!checkBox.isSelected()) {
 
-				progressBar.setStyle("visibility:visible;-fx-opacity:0.0");
+					Processor p = new Processor(file);
 
-				progressBar.progressProperty().bind(p.progressProperty());
-				progressBar.opacityProperty().bind(fadeIn.progressProperty());
+//				progressBar.setStyle("visibility:visible;-fx-opacity:0.0");
+//				progressBar.progressProperty().bind(p.progressProperty());
+//				progressBar.opacityProperty().bind(fadeIn.progressProperty());
 
-				p.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+					p.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
 
-					@Override
-					public void handle(WorkerStateEvent event) {
-						try {
-							buildDatagrid(p.get());
-						} catch (InterruptedException | ExecutionException e) {
-							e.printStackTrace();
+						@Override
+						public void handle(WorkerStateEvent event) {
+							try {
+
+								main.getChildren().remove(main.getChildren().size() - 1);
+
+								if (!checkBox.isSelected()) {
+
+									ScrollPane scrollPane = new ScrollPane();
+									GridPane grid = buildDatagrid(p.get());
+
+									scrollPane.setContent(grid);
+
+									main.getChildren().add(scrollPane);
+
+									grids = new ArrayList<>();
+									grids.add(grid);
+								} else {
+									main.getChildren().add(new Label());
+								}
+							} catch (InterruptedException | ExecutionException e) {
+								e.printStackTrace();
+							}
 						}
-					}
-				});
+					});
 
-				p.setOnFailed(new EventHandler<WorkerStateEvent>() {
+					p.setOnFailed(new EventHandler<WorkerStateEvent>() {
 
-					@Override
-					public void handle(WorkerStateEvent event) {
-						Alert alert = new Alert(AlertType.ERROR);
-						alert.setContentText(errorContent);
-						alert.setTitle(errorTite);
-					}
-				});
-
-				Thread animateThread = new Thread(fadeIn);
-				Thread barThread = new Thread(p);
-
-				animateThread.start();
-				barThread.start();
+						@Override
+						public void handle(WorkerStateEvent event) {
+							Alert alert = new Alert(AlertType.ERROR);
+							alert.setContentText(errorContent);
+							alert.setTitle(errorTite);
+						}
+					});
+					
+					Thread t = new Thread(p);
+					t.start();
+				} else {
+					MonthProcessor p = new MonthProcessor(file);
+					
+					Thread t = new Thread(p);
+					t.start();
+				}
 			}
 		};
 
@@ -201,6 +225,9 @@ public class Main extends Application {
 			}
 
 		});
+
+		key = new Label();
+		value = new Label();
 	}
 
 	private void setLanguage(String lang) {
@@ -212,26 +239,30 @@ public class Main extends Application {
 			errorContent = translation.get("ERROR_BODY");
 			errorTite = translation.get("ERROR_TITLE");
 			fileLabel.setText(translation.get("SELECTED"));
+			checkBox.setText(translation.get("CHECKBOX"));
+			key.setText(translation.get("KEY"));
+			value.setText(translation.get("VALUE"));
 
 		} catch (IOException e) {
 			System.out.println("i18n error");
 		}
 	}
 
-	private void buildDatagrid(Map<String, Float> data) {
+	private GridPane buildDatagrid(Map<String, Float> data) {
 
-		gridpane.getChildren().clear();
+		Map<String, Float> sorted = data.entrySet().stream().sorted(Map.Entry.comparingByValue()).collect(Collectors
+				.toMap(e -> e.getKey(), e -> e.getValue(), (e1, e2) -> e2, LinkedHashMap<String, Float>::new));
 
-		Label c1 = new Label("KEY");
-		GridPane.setHalignment(c1, HPos.RIGHT);
+		GridPane gridpane = new GridPane();
+		gridpane.setHgap(10d);
+		gridpane.setVgap(10d);
 
-		Label c2 = new Label("VALUE");
-
-		gridpane.add(c1, 0, 0);
-		gridpane.add(c2, 1, 0);
+		GridPane.setHalignment(key, HPos.RIGHT);
+		gridpane.add(key, 0, 0);
+		gridpane.add(value, 1, 0);
 
 		int rowCount = 1;
-		for (Entry<String, Float> row : data.entrySet()) {
+		for (Entry<String, Float> row : sorted.entrySet()) {
 
 			Label key = new Label(row.getKey());
 			Label value = new Label(Float.toString(row.getValue()));
@@ -245,5 +276,18 @@ public class Main extends Application {
 			GridPane.setHgrow(value, Priority.ALWAYS);
 			rowCount++;
 		}
+
+		gridpane.getColumnConstraints().addAll(new ColumnConstraints(width / 2d - 25d));
+
+		return gridpane;
+
+//		Tab tab = new Tab("March - 2019");
+//
+//		ScrollPane scrollPane = new ScrollPane();
+//		scrollPane.setContent(gridpane);
+//		scrollPane.setPadding(padding);
+//		tab.setContent(scrollPane);
+//
+//		tabs.getTabs().add(tab);
 	}
 }

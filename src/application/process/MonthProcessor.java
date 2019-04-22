@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.Cell;
@@ -21,7 +22,7 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 import javafx.concurrent.Task;
 
-public class Processor extends Task<Map<String, Float>> {
+public class MonthProcessor extends Task<Map<String, Map<String, Float>>> {
 
 	private static final int BALANCE_COLUMN = 5;
 	private static final int CONCEPT_COLUMN = 2;
@@ -29,13 +30,15 @@ public class Processor extends Task<Map<String, Float>> {
 	private static final int DATE_COLUMN = 0;
 	private File file;
 
-	public Processor(File file) {
+	public MonthProcessor(File file) {
 		this.file = file;
 	}
 
 	@Override
-	protected Map<String, Float> call() throws Exception {
-		Map<String, Float> map = new HashMap<>();
+	protected Map<String, Map<String, Float>> call() throws Exception {
+		Map<String, Map<String, Float>> result = new HashMap<>();
+		Map<String, Float> map;
+		
 		try {
 			updateProgress(1, 100);
 
@@ -64,11 +67,11 @@ public class Processor extends Task<Map<String, Float>> {
 					String st = getCellValue(r.getCell(DATE_COLUMN));
 					st = st.substring(0, 7) + "-01";
 					
+					if(!result.containsKey(st)) {
+						result.put(st, new HashMap<>());
+					}
 					
-					LocalDate dt = LocalDate.parse(st);
-					System.out.println(dt.format(f));
-					
-					
+					map = result.get(st);
 					
 					String name = r.getCell(CONCEPT_COLUMN).getStringCellValue();
 
@@ -82,13 +85,17 @@ public class Processor extends Task<Map<String, Float>> {
 				}
 				current++;
 			}
-		} catch (EncryptedDocumentException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
+		} catch (EncryptedDocumentException | IOException e) {
 			e.printStackTrace();
 		}
+		
+		for (Entry<String, Map<String, Float>> m : result.entrySet()) {
+			for(Entry<String, Float> i : m.getValue().entrySet()) {
+				System.out.println(m.getKey() + " - " + i.getKey() + " -> " + i.getValue());
+			}
+		}
 
-		return map;
+		return result;
 	}
 
 	private static BigDecimal round(float d, int decimalPlace) {

@@ -3,3 +3,6 @@ START:Process
 ERROR_BODY:Data parsing error. Make sure the parameters are correct.
 ERROR_TITLE:Processing error
 SELECTED:No file selected
+CHECKBOX:Monthly View
+KEY:Concept
+VALUE:Value
