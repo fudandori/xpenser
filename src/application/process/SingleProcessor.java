@@ -6,9 +6,7 @@ import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.Cell;
@@ -20,34 +18,31 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 import javafx.concurrent.Task;
 
-public class MonthProcessor extends Task<Map<String, Map<String, Float>>> {
+public class SingleProcessor extends Task<Map<String, Float>> {
 
 	private static final int BALANCE_COLUMN = 5;
 	private static final int CONCEPT_COLUMN = 2;
 	private static final int EXPENSES_COLUMN = 3;
-	private static final int DATE_COLUMN = 0;
-
-	private File file;
-	int max;
-	int current;
-	String balance;
-	String lastBalance;
-	Iterator<Row> iterator;
 	
-	public MonthProcessor(File file) {
+	private File file;
+	private double max;
+	private int current;
+	private Iterator<Row> iterator;
+	private String balance;
+	private String lastBalance;
+	
+	public SingleProcessor(File file) {
 		this.file = file;
 	}
 
 	@Override
-	protected Map<String, Map<String, Float>> call() throws Exception {
-		Map<String, Map<String, Float>> result = new HashMap<>();
-
-		updateProgress(1, 100);
-
+	protected Map<String, Float> call() throws Exception {
+		Map<String, Float> map = new HashMap<>();
 		try {
-
+			updateProgress(1, 100);
+			
 			initializeIterator(file);
-
+			
 			while (iterator.hasNext()) {
 				Row row = iterator.next();
 
@@ -56,14 +51,6 @@ public class MonthProcessor extends Task<Map<String, Map<String, Float>>> {
 				if (row.getRowNum() > 0 && !balance.equals(lastBalance)) {
 
 					lastBalance = balance;
-
-					String date = getCellValue(row, DATE_COLUMN).substring(0, 7) + "-01";
-
-					if (!result.containsKey(date)) {
-						result.put(date, new HashMap<>());
-					}
-
-					Map<String, Float> map = result.get(date);
 
 					String concept = getCellValue(row, CONCEPT_COLUMN);
 
@@ -74,18 +61,15 @@ public class MonthProcessor extends Task<Map<String, Map<String, Float>>> {
 
 					updateProgress(current, max);
 				}
-				
 				current++;
 			}
-			
-			result = sortByKey(result);
-			
-		} catch (EncryptedDocumentException | IOException e) {
+		} catch (EncryptedDocumentException e) {
 			e.printStackTrace();
-			result = null;
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 
-		return result;
+		return map;
 	}
 
 	private static float round(float d) {
@@ -121,13 +105,5 @@ public class MonthProcessor extends Task<Map<String, Map<String, Float>>> {
 		this.max = sheet.getPhysicalNumberOfRows();
 		this.current = 1;
 		iterator = sheet.rowIterator();
-	}
-	
-	private Map<String, Map<String, Float>> sortByKey(Map<String, Map<String, Float>> input) {
-		return input.entrySet()
-				.stream()
-				.sorted(Map.Entry.comparingByKey())
-				.collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue(), (e1, e2) -> e2,
-						LinkedHashMap<String, Map<String, Float>>::new));
 	}
 }

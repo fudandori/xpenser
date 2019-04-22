@@ -2,6 +2,8 @@ package application;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,10 +13,11 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import application.animation.AnimationTimer;
 import application.language.Language;
 import application.language.LanguageService;
 import application.process.MonthProcessor;
-import application.process.Processor;
+import application.process.SingleProcessor;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -32,43 +35,45 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class Main extends Application {
-	FileChooser fileChooser;
-	TabPane tabs = new TabPane();
-	private Button selectFileButton;
-	private Button startButton;
-	VBox main = new VBox(10d);
-	private Label fileLabel;
+	private final double INITIAL_HEIGHT = 600d;
+	private final double INITIAL_WIDTH = 800d;
+	private final Insets padding = new Insets(10d);
+	private final Language[] langs = { new Language("en", "English"), new Language("es", "Español") };
+
+	private VBox main = new VBox(10d);
+
 	private File file;
 
-	Insets padding = new Insets(10d);
-	private List<GridPane> grids = new ArrayList<>();
-
-	// private ProgressBar progressBar;
-
-	private String errorTite;
-	private String errorContent;
-
+	private FileChooser fileChooser;
+	private Button selectFileButton;
+	private Button startButton;
+	private CheckBox checkBox;
 	private ChoiceBox<Language> languageChoiceBox;
 
-	private CheckBox checkBox;
+	private List<GridPane> grids;
 
 	private Label key;
 	private Label value;
+	private Label fileLabel;
 
-	Language[] langs = { new Language("en", "English"), new Language("es", "Español") };
+	private String errorTite;
+	private String errorContent;
 
 	double width;
 
@@ -87,38 +92,26 @@ public class Main extends Application {
 
 		initializeControls(primaryStage);
 
-		HBox hbox = new HBox(10d, selectFileButton, fileLabel, languageChoiceBox, checkBox);
-		hbox.setAlignment(Pos.CENTER_LEFT);
+		Region region = new Region();
+		HBox.setHgrow(region, Priority.ALWAYS);
 
-		tabs.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
+		HBox firstRow = new HBox(10d, selectFileButton, fileLabel, region, languageChoiceBox);
+		firstRow.setAlignment(Pos.CENTER_LEFT);
 
-		// main.getChildren().add(tabs);
+		HBox secondRow = new HBox(10d, startButton, checkBox);
+		secondRow.setAlignment(Pos.CENTER_LEFT);
 
-		main.getChildren().addAll(hbox, startButton, new Label());
+		main.getChildren().addAll(firstRow, secondRow, new Label());
 		main.setPadding(padding);
 
-		Scene scene = new Scene(main, 800, 600);
+		Scene scene = new Scene(main, INITIAL_WIDTH, INITIAL_HEIGHT);
 		scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 		scene.setFill(Color.BEIGE);
 
-		String locale = Locale.getDefault().getLanguage();
-		setLanguage(locale);
+		i18n();
 
-		int index = -1;
-		boolean found = false;
-
-		for (int i = 0; i < langs.length && !found; i++) {
-			if (langs[i].getCode().equals(locale)) {
-				index = i;
-				found = true;
-			}
-		}
-
-		if (found) {
-			languageChoiceBox.getSelectionModel().select(index);
-		}
-
-		primaryStage.setTitle("For Aiur!");
+		primaryStage.setTitle("Xpenser");
+		primaryStage.getIcons().add(new Image(Main.class.getResourceAsStream("icon.png")));
 		primaryStage.setScene(scene);
 
 		primaryStage.show();
@@ -133,12 +126,7 @@ public class Main extends Application {
 		checkBox = new CheckBox();
 
 		fileChooser = new FileChooser();
-		fileChooser.setTitle("Open Resource File");
 		fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xls", "*.xlsx"));
-
-		selectFileButton = new Button();
-		startButton = new Button();
-		startButton.setDisable(true);
 
 		EventHandler<MouseEvent> selectFileEvent = new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
@@ -154,67 +142,23 @@ public class Main extends Application {
 
 		EventHandler<MouseEvent> startEvent = new EventHandler<MouseEvent>() {
 			public void handle(MouseEvent event) {
+
+				main.getChildren().remove(main.getChildren().size() - 1);
+
 				if (!checkBox.isSelected()) {
-
-					Processor p = new Processor(file);
-
-//				progressBar.setStyle("visibility:visible;-fx-opacity:0.0");
-//				progressBar.progressProperty().bind(p.progressProperty());
-//				progressBar.opacityProperty().bind(fadeIn.progressProperty());
-
-					p.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-
-						@Override
-						public void handle(WorkerStateEvent event) {
-							try {
-
-								main.getChildren().remove(main.getChildren().size() - 1);
-
-								if (!checkBox.isSelected()) {
-
-									ScrollPane scrollPane = new ScrollPane();
-									GridPane grid = buildDatagrid(p.get());
-
-									scrollPane.setContent(grid);
-
-									main.getChildren().add(scrollPane);
-
-									grids = new ArrayList<>();
-									grids.add(grid);
-								} else {
-									main.getChildren().add(new Label());
-								}
-							} catch (InterruptedException | ExecutionException e) {
-								e.printStackTrace();
-							}
-						}
-					});
-
-					p.setOnFailed(new EventHandler<WorkerStateEvent>() {
-
-						@Override
-						public void handle(WorkerStateEvent event) {
-							Alert alert = new Alert(AlertType.ERROR);
-							alert.setContentText(errorContent);
-							alert.setTitle(errorTite);
-						}
-					});
-					
-					Thread t = new Thread(p);
-					t.start();
+					showSingleData();
 				} else {
-					MonthProcessor p = new MonthProcessor(file);
-					
-					Thread t = new Thread(p);
-					t.start();
+					showMultipleData();
 				}
 			}
 		};
-
+		
+		selectFileButton = new Button();
 		selectFileButton.setOnMouseClicked(selectFileEvent);
-		startButton.setOnMouseClicked(startEvent);
 
-		fileLabel = new Label();
+		startButton = new Button();
+		startButton.setDisable(true);
+		startButton.setOnMouseClicked(startEvent);
 
 		languageChoiceBox = new ChoiceBox<Language>(FXCollections.observableArrayList(langs));
 		languageChoiceBox.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
@@ -228,17 +172,21 @@ public class Main extends Application {
 
 		key = new Label();
 		value = new Label();
+		fileLabel = new Label();
+		
+		grids = new ArrayList<>();
 	}
 
 	private void setLanguage(String lang) {
 		try {
+
 			Map<String, String> translation = LanguageService.getWords(lang);
 
 			selectFileButton.setText(translation.get("LOAD"));
 			startButton.setText(translation.get("START"));
 			errorContent = translation.get("ERROR_BODY");
 			errorTite = translation.get("ERROR_TITLE");
-			fileLabel.setText(translation.get("SELECTED"));
+			if(file == null) fileLabel.setText(translation.get("SELECTED"));
 			checkBox.setText(translation.get("CHECKBOX"));
 			key.setText(translation.get("KEY"));
 			value.setText(translation.get("VALUE"));
@@ -248,18 +196,24 @@ public class Main extends Application {
 		}
 	}
 
-	private GridPane buildDatagrid(Map<String, Float> data) {
+	private GridPane generateDatagrid(Map<String, Float> data, boolean legend) {
 
-		Map<String, Float> sorted = data.entrySet().stream().sorted(Map.Entry.comparingByValue()).collect(Collectors
+		Map<String, Float> sorted = data
+				.entrySet()
+				.stream()
+				.sorted(Map.Entry.comparingByValue())
+				.collect(Collectors
 				.toMap(e -> e.getKey(), e -> e.getValue(), (e1, e2) -> e2, LinkedHashMap<String, Float>::new));
 
 		GridPane gridpane = new GridPane();
 		gridpane.setHgap(10d);
 		gridpane.setVgap(10d);
 
-		GridPane.setHalignment(key, HPos.RIGHT);
-		gridpane.add(key, 0, 0);
-		gridpane.add(value, 1, 0);
+		if (legend) {
+			GridPane.setHalignment(key, HPos.RIGHT);
+			gridpane.add(key, 0, 0);
+			gridpane.add(value, 1, 0);
+		}
 
 		int rowCount = 1;
 		for (Entry<String, Float> row : sorted.entrySet()) {
@@ -280,14 +234,128 @@ public class Main extends Application {
 		gridpane.getColumnConstraints().addAll(new ColumnConstraints(width / 2d - 25d));
 
 		return gridpane;
+	}
 
-//		Tab tab = new Tab("March - 2019");
-//
-//		ScrollPane scrollPane = new ScrollPane();
-//		scrollPane.setContent(gridpane);
-//		scrollPane.setPadding(padding);
-//		tab.setContent(scrollPane);
-//
-//		tabs.getTabs().add(tab);
+	private void showSingleData() {
+		SingleProcessor p = new SingleProcessor(file);
+
+		p.setOnFailed(onFailAlert());
+		p.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+
+			@Override
+			public void handle(WorkerStateEvent event) {
+				try {
+
+					AnimationTimer fadeIn = new AnimationTimer(500);
+
+					GridPane grid = generateDatagrid(p.get(), true);
+
+					ScrollPane scrollPane = new ScrollPane();
+					scrollPane.opacityProperty().set(0d);
+					scrollPane.opacityProperty().bind(fadeIn.progressProperty());
+					scrollPane.setContent(grid);
+
+					main.getChildren().add(scrollPane);
+					
+					grids = new ArrayList<>();
+					grids.add(grid);
+
+					Thread animation = new Thread(fadeIn);
+					animation.start();
+					
+				} catch (InterruptedException | ExecutionException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+
+		Thread t = new Thread(p);
+		t.start();
+	}
+
+	private void showMultipleData() {
+		MonthProcessor p = new MonthProcessor(file);
+		
+		p.setOnFailed(onFailAlert());
+		p.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+
+			@Override
+			public void handle(WorkerStateEvent event) {
+				try {
+
+					AnimationTimer fadeIn = new AnimationTimer(500);
+
+					TabPane tabs = new TabPane();
+					tabs.opacityProperty().set(0d);
+					tabs.opacityProperty().bind(fadeIn.progressProperty());
+					tabs.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
+
+					grids = new ArrayList<>();
+
+					for (Entry<String, Map<String, Float>> map : p.get().entrySet()) {
+
+						String tabName = LocalDate
+								.parse(map.getKey())
+								.format(DateTimeFormatter.ofPattern("MMMM - yyyy"));
+						
+						Tab tab = new Tab(tabName);
+
+						ScrollPane scrollPane = new ScrollPane();
+						GridPane grid = generateDatagrid(map.getValue(), false);
+						grid.opacityProperty().set(0d);
+						grid.opacityProperty().bind(fadeIn.progressProperty());
+
+						scrollPane.setContent(grid);
+						tab.setContent(scrollPane);
+
+						tabs.getTabs().add(tab);
+						grids.add(grid);
+					}
+
+					main.getChildren().add(tabs);
+
+					Thread animation = new Thread(fadeIn);
+					animation.start();
+				} catch (InterruptedException | ExecutionException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+		
+		Thread t = new Thread(p);
+		t.start();
+	}
+
+	private EventHandler<WorkerStateEvent> onFailAlert() {
+		return new EventHandler<WorkerStateEvent>() {
+
+			@Override
+			public void handle(WorkerStateEvent event) {
+				Alert alert = new Alert(AlertType.ERROR);
+				alert.setContentText(errorContent);
+				alert.setTitle(errorTite);
+			}
+		};
+	}
+	
+	private void i18n() {
+		String locale = Locale.getDefault().getLanguage();
+		setLanguage(locale);
+
+		int index = -1;
+		boolean found = false;
+
+		for (int i = 0; i < langs.length && !found; i++) {
+			if (langs[i].getCode().equals(locale)) {
+				index = i;
+				found = true;
+			}
+		}
+
+		if (found) {
+			languageChoiceBox.getSelectionModel().select(index);
+		} else {
+			languageChoiceBox.getSelectionModel().select(0);
+		}
 	}
 }
