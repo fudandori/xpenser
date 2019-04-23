@@ -128,47 +128,18 @@ public class Main extends Application {
 		fileChooser = new FileChooser();
 		fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xls", "*.xlsx"));
 
-		EventHandler<MouseEvent> selectFileEvent = new EventHandler<MouseEvent>() {
-			public void handle(MouseEvent event) {
-
-				File selectedFile = fileChooser.showOpenDialog(stage);
-				if (selectedFile != null) {
-					file = selectedFile;
-					fileLabel.setText(file.getName());
-					startButton.setDisable(false);
-				}
-			}
-		};
-
-		EventHandler<MouseEvent> startEvent = new EventHandler<MouseEvent>() {
-			public void handle(MouseEvent event) {
-
-				main.getChildren().remove(main.getChildren().size() - 1);
-
-				if (!checkBox.isSelected()) {
-					showSingleData();
-				} else {
-					showMultipleData();
-				}
-			}
-		};
-		
 		selectFileButton = new Button();
-		selectFileButton.setOnMouseClicked(selectFileEvent);
+		selectFileButton.setOnMouseClicked(getSelectFileEvent(stage));
 
 		startButton = new Button();
 		startButton.setDisable(true);
-		startButton.setOnMouseClicked(startEvent);
+		startButton.setOnMouseClicked(getStartEvent());
 
 		languageChoiceBox = new ChoiceBox<Language>(FXCollections.observableArrayList(langs));
-		languageChoiceBox.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
-
-			@Override
-			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-				setLanguage(langs[newValue.intValue()].getCode());
-			}
-
-		});
+		languageChoiceBox
+			.getSelectionModel()
+			.selectedIndexProperty()
+			.addListener(getChangeListener());
 
 		key = new Label();
 		value = new Label();
@@ -340,7 +311,10 @@ public class Main extends Application {
 	
 	private void i18n() {
 		String locale = Locale.getDefault().getLanguage();
-		setLanguage(locale);
+
+		if (!LanguageService.existsLocale(locale)) {
+			locale = "en";
+		}
 
 		int index = -1;
 		boolean found = false;
@@ -351,11 +325,47 @@ public class Main extends Application {
 				found = true;
 			}
 		}
+		
+		languageChoiceBox.getSelectionModel().select(index);
+	}
+	
+	private EventHandler<MouseEvent> getSelectFileEvent(Stage stage) {
+		return new EventHandler<MouseEvent>() {
+			
+			public void handle(MouseEvent event) {
+				File selectedFile = fileChooser.showOpenDialog(stage);
+				if (selectedFile != null) {
+					file = selectedFile;
+					fileLabel.setText(file.getName());
+					startButton.setDisable(false);
+				}
+			}
+		};
+	}
 
-		if (found) {
-			languageChoiceBox.getSelectionModel().select(index);
-		} else {
-			languageChoiceBox.getSelectionModel().select(0);
-		}
+	private EventHandler<MouseEvent> getStartEvent() {
+		return new EventHandler<MouseEvent>() {
+			
+			public void handle(MouseEvent event) {
+				main.getChildren().remove(main.getChildren().size() - 1);
+
+				if (!checkBox.isSelected()) {
+					showSingleData();
+				} else {
+					showMultipleData();
+				}
+			}
+		};
+	}
+	
+	private ChangeListener<Number> getChangeListener() {
+		return new ChangeListener<Number>() {
+
+			@Override
+			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+				setLanguage(langs[newValue.intValue()].getCode());
+			}
+
+		};
 	}
 }

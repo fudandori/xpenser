@@ -27,9 +27,9 @@ public class SingleProcessor extends Task<Map<String, Float>> {
 	private File file;
 	private double max;
 	private int current;
-	private Iterator<Row> iterator;
 	private String balance;
 	private String lastBalance;
+	private Iterator<Row> iterator;
 	
 	public SingleProcessor(File file) {
 		this.file = file;

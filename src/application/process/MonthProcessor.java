@@ -28,11 +28,11 @@ public class MonthProcessor extends Task<Map<String, Map<String, Float>>> {
 	private static final int DATE_COLUMN = 0;
 
 	private File file;
-	int max;
-	int current;
-	String balance;
-	String lastBalance;
-	Iterator<Row> iterator;
+	private int max;
+	private int current;
+	private String balance;
+	private String lastBalance;
+	private Iterator<Row> iterator;
 	
 	public MonthProcessor(File file) {
 		this.file = file;
