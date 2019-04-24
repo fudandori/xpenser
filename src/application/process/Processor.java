@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.ZoneId;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -18,18 +17,19 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 import javafx.concurrent.Task;
 
-public abstract class Processor extends Task<Map<?, ?>> {
+public abstract class Processor<T> extends Task<T> {
 
 	protected static final int BALANCE_COLUMN = 5;
 	protected static final int CONCEPT_COLUMN = 2;
 	protected static final int EXPENSES_COLUMN = 3;
+	protected static final int DATE_COLUMN = 0;
 	
 	protected File file;
 	protected double max;
 	protected int current;
-	protected Iterator<Row> iterator;
 	protected String balance;
 	protected String lastBalance;
+	protected Iterator<Row> iterator;
 	
 	public Processor(File file) {
 		this.file = file;
@@ -68,5 +68,24 @@ public abstract class Processor extends Task<Map<?, ?>> {
 		this.max = sheet.getPhysicalNumberOfRows();
 		this.current = 1;
 		iterator = sheet.rowIterator();
+	}
+	
+	protected void map(Row row, Map<String, Float> map) {
+		balance = getCellValue(row, BALANCE_COLUMN);
+
+		if (row.getRowNum() > 0 && !balance.equals(lastBalance)) {
+
+			lastBalance = balance;
+
+			String concept = getCellValue(row, CONCEPT_COLUMN);
+
+			Float value = Float.parseFloat(getCellValue(row, EXPENSES_COLUMN));
+			Float total = map.containsKey(concept) ? value + map.get(concept) : value;
+			
+			map.put(concept, round(total));
+
+		}
+		
+		//return map;
 	}
 }
