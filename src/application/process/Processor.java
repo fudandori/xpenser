@@ -132,7 +132,5 @@ public class Processor {
 			map.put(concept, round(total));
 
 		}
-		
-		//return map;
 	}
 }
