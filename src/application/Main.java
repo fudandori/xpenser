@@ -10,19 +10,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import application.animation.AnimationTimer;
 import application.language.Language;
 import application.language.LanguageService;
-import application.process.MonthProcessor;
-import application.process.SingleProcessor;
+import application.process.Processor;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
-import javafx.concurrent.WorkerStateEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -207,106 +204,73 @@ public class Main extends Application {
 		return gridpane;
 	}
 
-	private void showSingleData() {
-		SingleProcessor p = new SingleProcessor(file);
+	private void showSingleData(Processor p, AnimationTimer fadeIn) {
 
-		p.setOnFailed(onFailAlert());
-		p.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+		try {
 
-			@Override
-			public void handle(WorkerStateEvent event) {
-				try {
+			GridPane grid = generateDatagrid(p.process(), true);
 
-					AnimationTimer fadeIn = new AnimationTimer(500);
+			ScrollPane scrollPane = new ScrollPane();
+			scrollPane.opacityProperty().set(0d);
+			scrollPane.opacityProperty().bind(fadeIn.progressProperty());
+			scrollPane.setContent(grid);
 
-					GridPane grid = generateDatagrid(p.get(), true);
+			main.getChildren().add(scrollPane);
 
-					ScrollPane scrollPane = new ScrollPane();
-					scrollPane.opacityProperty().set(0d);
-					scrollPane.opacityProperty().bind(fadeIn.progressProperty());
-					scrollPane.setContent(grid);
+			grids = new ArrayList<>();
+			grids.add(grid);
 
-					main.getChildren().add(scrollPane);
-					
-					grids = new ArrayList<>();
-					grids.add(grid);
+			Thread animation = new Thread(fadeIn);
+			animation.start();
 
-					Thread animation = new Thread(fadeIn);
-					animation.start();
-					
-				} catch (InterruptedException | ExecutionException e) {
-					e.printStackTrace();
-				}
-			}
-		});
-
-		Thread t = new Thread(p);
-		t.start();
+		} catch (Exception e) {
+			onFailAlert();
+		}
 	}
 
-	private void showMultipleData() {
-		MonthProcessor p = new MonthProcessor(file);
-		
-		p.setOnFailed(onFailAlert());
-		p.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+	private void showMultipleData(Processor p, AnimationTimer fadeIn) {
 
-			@Override
-			public void handle(WorkerStateEvent event) {
-				try {
+		try {
 
-					AnimationTimer fadeIn = new AnimationTimer(500);
+			TabPane tabs = new TabPane();
+			tabs.opacityProperty().set(0d);
+			tabs.opacityProperty().bind(fadeIn.progressProperty());
+			tabs.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
 
-					TabPane tabs = new TabPane();
-					tabs.opacityProperty().set(0d);
-					tabs.opacityProperty().bind(fadeIn.progressProperty());
-					tabs.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
+			grids = new ArrayList<>();
 
-					grids = new ArrayList<>();
+			for (Entry<String, Map<String, Float>> map : p.processMonthly().entrySet()) {
 
-					for (Entry<String, Map<String, Float>> map : p.get().entrySet()) {
+				String tabName = LocalDate.parse(map.getKey()).format(DateTimeFormatter.ofPattern("MMMM - yyyy"));
 
-						String tabName = LocalDate
-								.parse(map.getKey())
-								.format(DateTimeFormatter.ofPattern("MMMM - yyyy"));
-						
-						Tab tab = new Tab(tabName);
+				Tab tab = new Tab(tabName);
 
-						ScrollPane scrollPane = new ScrollPane();
-						GridPane grid = generateDatagrid(map.getValue(), false);
-						grid.opacityProperty().set(0d);
-						grid.opacityProperty().bind(fadeIn.progressProperty());
+				ScrollPane scrollPane = new ScrollPane();
+				GridPane grid = generateDatagrid(map.getValue(), false);
+				grid.opacityProperty().set(0d);
+				grid.opacityProperty().bind(fadeIn.progressProperty());
 
-						scrollPane.setContent(grid);
-						tab.setContent(scrollPane);
+				scrollPane.setContent(grid);
+				tab.setContent(scrollPane);
 
-						tabs.getTabs().add(tab);
-						grids.add(grid);
-					}
-
-					main.getChildren().add(tabs);
-
-					Thread animation = new Thread(fadeIn);
-					animation.start();
-				} catch (InterruptedException | ExecutionException e) {
-					e.printStackTrace();
-				}
+				tabs.getTabs().add(tab);
+				grids.add(grid);
 			}
-		});
-		
-		Thread t = new Thread(p);
-		t.start();
+
+			main.getChildren().add(tabs);
+
+			Thread animation = new Thread(fadeIn);
+			animation.start();
+		} catch (Exception e) {
+			onFailAlert();
+		}
 	}
 
-	private EventHandler<WorkerStateEvent> onFailAlert() {
-		return new EventHandler<WorkerStateEvent>() {
-
-			@Override
-			public void handle(WorkerStateEvent event) {
-				Alert alert = new Alert(AlertType.ERROR);
-				alert.setContentText(errorContent);
-				alert.setTitle(errorTite);
-			}
-		};
+	private void onFailAlert() {
+		Alert alert = new Alert(AlertType.ERROR);
+		alert.setContentText(errorContent);
+		alert.setTitle(errorTite);
+		alert.show();
 	}
 	
 	private void i18n() {
@@ -345,14 +309,21 @@ public class Main extends Application {
 
 	private EventHandler<MouseEvent> getStartEvent() {
 		return new EventHandler<MouseEvent>() {
-			
+
 			public void handle(MouseEvent event) {
 				main.getChildren().remove(main.getChildren().size() - 1);
 
+				Processor p = new Processor(file);
+				AnimationTimer fadeIn = new AnimationTimer(500);
+				
 				if (!checkBox.isSelected()) {
-					showSingleData();
+
+					showSingleData(p, fadeIn);
+					
 				} else {
-					showMultipleData();
+
+					showMultipleData(p, fadeIn);
+
 				}
 			}
 		};

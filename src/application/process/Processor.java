@@ -4,42 +4,92 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 
-import javafx.concurrent.Task;
+public class Processor {
 
-public abstract class Processor<T> extends Task<T> {
-
-	protected static final int BALANCE_COLUMN = 5;
-	protected static final int CONCEPT_COLUMN = 2;
-	protected static final int EXPENSES_COLUMN = 3;
-	protected static final int DATE_COLUMN = 0;
+	private static final int BALANCE_COLUMN = 5;
+	private static final int CONCEPT_COLUMN = 2;
+	private static final int EXPENSES_COLUMN = 3;
+	private static final int DATE_COLUMN = 0;
 	
-	protected File file;
-	protected double max;
-	protected int current;
-	protected String balance;
-	protected String lastBalance;
-	protected Iterator<Row> iterator;
+	private File file;
+	private String balance;
+	private String lastBalance;
 	
 	public Processor(File file) {
 		this.file = file;
 	}
 
-	protected static float round(float d) {
+	public Map<String, Float> process() throws Exception {
+
+		Map<String, Float> result = new HashMap<>();
+
+		Iterator<Row> i = getIterator(file);
+
+		while (i.hasNext()) {
+			Row row = i.next();
+			map(row, result);
+		}
+
+		return result;
+	}
+
+	public Map<String, Map<String, Float>> processMonthly() throws Exception {
+
+		Map<String, Map<String, Float>> result = new HashMap<>();
+
+		Iterator<Row> i = getIterator(file);
+
+		while (i.hasNext()) {
+			Row row = i.next();
+			map(row, getMap(row, result));
+		}
+
+		return sortByKey(result);
+	}
+
+	private Map<String, Float> getMap(Row row, Map<String, Map<String, Float>> source) {
+		Map<String, Float> result = null;
+
+		if (row.getRowNum() > 0) {
+
+			String date = getCellValue(row, DATE_COLUMN).substring(0, 7) + "-01";
+
+			if (!source.containsKey(date)) {
+				source.put(date, new HashMap<>());
+			}
+
+			result = source.get(date);
+		}
+
+		return result;
+	}
+
+	private Map<String, Map<String, Float>> sortByKey(Map<String, Map<String, Float>> input) {
+		return input.entrySet()
+				.stream()
+				.sorted(Map.Entry.comparingByKey())
+				.collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue(), (e1, e2) -> e2,
+						LinkedHashMap<String, Map<String, Float>>::new));
+	}
+	
+	private static float round(float d) {
 		return new BigDecimal(Float.toString(d)).setScale(2, BigDecimal.ROUND_HALF_UP).floatValue();
 	}
 
-	protected static String getCellValue(Row row, int column) {
+	private static String getCellValue(Row row, int column) {
 		String result = null;
 		Cell cell = row.getCell(column);
 		CellType type = cell.getCellType();
@@ -63,14 +113,11 @@ public abstract class Processor<T> extends Task<T> {
 		return result;
 	}
 
-	protected void initializeIterator(File file) throws EncryptedDocumentException, IOException {
-		Sheet sheet = WorkbookFactory.create(file).getSheetAt(0);
-		this.max = sheet.getPhysicalNumberOfRows();
-		this.current = 1;
-		iterator = sheet.rowIterator();
+	private Iterator<Row> getIterator(File file) throws EncryptedDocumentException, IOException {
+		return WorkbookFactory.create(file).getSheetAt(0).rowIterator();
 	}
 	
-	protected void map(Row row, Map<String, Float> map) {
+	private void map(Row row, Map<String, Float> map) {
 		balance = getCellValue(row, BALANCE_COLUMN);
 
 		if (row.getRowNum() > 0 && !balance.equals(lastBalance)) {
