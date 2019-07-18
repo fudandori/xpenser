@@ -1,10 +1,13 @@
 package application;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -15,6 +18,7 @@ import java.util.stream.Collectors;
 import application.animation.AnimationTimer;
 import application.language.Language;
 import application.language.LanguageService;
+import application.modal.ConfigDialog;
 import application.process.Processor;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
@@ -60,6 +64,7 @@ public class Main extends Application {
 	private FileChooser fileChooser;
 	private Button selectFileButton;
 	private Button startButton;
+	private Button configButton;
 	private CheckBox checkBox;
 	private ChoiceBox<Language> languageChoiceBox;
 
@@ -72,10 +77,14 @@ public class Main extends Application {
 	private String errorTite;
 	private String errorContent;
 
-	double width;
+	private double width;
 
+	public Label Test = new Label("TEST");
+	private Map<String, Integer> config;
+	
 	@Override
 	public void start(Stage primaryStage) {
+		updateConfig();
 		width = primaryStage.getWidth();
 
 		primaryStage.widthProperty().addListener((obs, oldVal, newVal) -> {
@@ -92,7 +101,7 @@ public class Main extends Application {
 		Region region = new Region();
 		HBox.setHgrow(region, Priority.ALWAYS);
 
-		HBox firstRow = new HBox(10d, selectFileButton, fileLabel, region, languageChoiceBox);
+		HBox firstRow = new HBox(10d, selectFileButton, fileLabel, region, Test, configButton, languageChoiceBox);
 		firstRow.setAlignment(Pos.CENTER_LEFT);
 
 		HBox secondRow = new HBox(10d, startButton, checkBox);
@@ -108,7 +117,7 @@ public class Main extends Application {
 		i18n();
 
 		primaryStage.setTitle("Xpenser");
-		primaryStage.getIcons().add(new Image(Main.class.getResourceAsStream("icon.png")));
+		primaryStage.getIcons().add(new Image("/assets/icon.png"));
 		primaryStage.setScene(scene);
 
 		primaryStage.show();
@@ -132,6 +141,8 @@ public class Main extends Application {
 		startButton.setDisable(true);
 		startButton.setOnMouseClicked(getStartEvent());
 
+		configButton = new Button();
+		configButton.setOnMouseClicked(clickShow(stage, this));
 		languageChoiceBox = new ChoiceBox<Language>(FXCollections.observableArrayList(langs));
 		languageChoiceBox
 			.getSelectionModel()
@@ -313,7 +324,12 @@ public class Main extends Application {
 			public void handle(MouseEvent event) {
 				main.getChildren().remove(main.getChildren().size() - 1);
 
-				Processor p = new Processor(file);
+				int balance = config.get("BALANCE_COLUMN").intValue();
+				int concept = config.get("CONCEPT_COLUMN").intValue();
+				int expenses = config.get("EXPENSES_COLUMN").intValue();
+				int date = config.get("DATE_COLUMN").intValue();
+				
+				Processor p = new Processor(file, balance, concept, expenses, date);
 				AnimationTimer fadeIn = new AnimationTimer(500);
 				
 				if (!checkBox.isSelected()) {
@@ -338,5 +354,30 @@ public class Main extends Application {
 			}
 
 		};
+	}
+	
+	private EventHandler<MouseEvent> clickShow(Stage primary, Main context) {
+		return new EventHandler<MouseEvent>() {
+
+			public void handle(MouseEvent event) {
+				Stage stage = new ConfigDialog(primary, context);
+
+				stage.show();
+			}
+		};
+	}
+	
+	private void updateConfig() {
+		String line;
+		config = new HashMap<>();
+		
+		try (BufferedReader b = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/config.properties")))) {
+			while((line = b.readLine()) != null) {
+				String[] split = line.split("=");
+				config.put(split[0], Integer.parseInt(split[1]));
+			}
+		} catch (IOException e) {
+			config = null;
+		}
 	}
 }

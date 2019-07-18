@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
@@ -19,17 +20,21 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 public class Processor {
 
-	private static final int BALANCE_COLUMN = 5;
-	private static final int CONCEPT_COLUMN = 2;
-	private static final int EXPENSES_COLUMN = 3;
-	private static final int DATE_COLUMN = 0;
+	private int balanceColumn = 5;
+	private int conceptColumn = 2;
+	private int expensesColumn = 3;
+	private int dateColumn = 0;
 	
 	private File file;
 	private String balance;
 	private String lastBalance;
 	
-	public Processor(File file) {
+	public Processor(File file, int balance, int concept, int expenses, int date) {
 		this.file = file;
+		this.balanceColumn = balance;
+		this.conceptColumn = concept;
+		this.expensesColumn = expenses;
+		this.dateColumn = date;
 	}
 
 	public Map<String, Float> process() throws Exception {
@@ -65,7 +70,7 @@ public class Processor {
 
 		if (row.getRowNum() > 0) {
 
-			String date = getCellValue(row, DATE_COLUMN).substring(0, 7) + "-01";
+			String date = getCellValue(row, dateColumn).substring(0, 7) + "-01";
 
 			if (!source.containsKey(date)) {
 				source.put(date, new HashMap<>());
@@ -118,15 +123,34 @@ public class Processor {
 	}
 	
 	private void map(Row row, Map<String, Float> map) {
-		balance = getCellValue(row, BALANCE_COLUMN);
+		balance = getCellValue(row, balanceColumn);
 
 		if (row.getRowNum() > 0 && !balance.equals(lastBalance)) {
 
 			lastBalance = balance;
 
-			String concept = getCellValue(row, CONCEPT_COLUMN);
+			String concept = getCellValue(row, conceptColumn);
+			
+			boolean isAmazon = Pattern
+								.compile("(TJ-)?((AMZN MKTP ES)|(AMAZON.ES))", Pattern.CASE_INSENSITIVE)
+								.matcher(concept)
+								.lookingAt();
+			
+			boolean isDominos = Pattern
+								.compile("(TJ-)?DOMINOS PIZZA", Pattern.CASE_INSENSITIVE)
+								.matcher(concept)
+								.lookingAt();
+			
+			boolean isTelepizza = Pattern
+					.compile(".*TELEPIZZA.*", Pattern.CASE_INSENSITIVE)
+					.matcher(concept)
+					.lookingAt();
+					
+			if(isAmazon) { concept = "Amazon"; }
+			else if (isTelepizza) { concept = "TELEPIZZA"; }
+			else if (isDominos) { concept = "DOMINOS PIZZA"; }
 
-			Float value = Float.parseFloat(getCellValue(row, EXPENSES_COLUMN));
+			Float value = Float.parseFloat(getCellValue(row, expensesColumn));
 			Float total = map.containsKey(concept) ? value + map.get(concept) : value;
 			
 			map.put(concept, round(total));
