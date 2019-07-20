@@ -82,6 +82,11 @@ public class Main extends Application {
 	public Label Test = new Label("TEST");
 	private Map<String, Integer> config;
 	
+	private String balanceColumn;
+	private String conceptColumn;
+	private String expensesColumn;
+	private String dateColumn;
+	
 	@Override
 	public void start(Stage primaryStage) {
 		updateConfig();
@@ -169,7 +174,11 @@ public class Main extends Application {
 			checkBox.setText(translation.get("CHECKBOX"));
 			key.setText(translation.get("KEY"));
 			value.setText(translation.get("VALUE"));
-
+			balanceColumn = translation.get("BALANCE_COLUMN");
+			conceptColumn = translation.get("CONCEPT_COLUMN");
+			dateColumn = translation.get("DATE_COLUMN");
+			expensesColumn = translation.get("EXPENSES_COLUMN");
+			
 		} catch (IOException e) {
 			System.out.println("i18n error");
 		}
@@ -367,7 +376,7 @@ public class Main extends Application {
 		};
 	}
 	
-	private void updateConfig() {
+	public void updateConfig() {
 		String line;
 		config = new HashMap<>();
 		
@@ -379,5 +388,21 @@ public class Main extends Application {
 		} catch (IOException e) {
 			config = null;
 		}
+	}
+	
+	public String getBalanceColumn() {
+		return balanceColumn;
+	}
+
+	public String getConceptColumn() {
+		return conceptColumn;
+	}
+
+	public String getExpensesColumn() {
+		return expensesColumn;
+	}
+
+	public String getDateColumn() {
+		return dateColumn;
 	}
 }

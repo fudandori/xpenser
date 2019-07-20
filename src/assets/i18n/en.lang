@@ -6,3 +6,7 @@ SELECTED:No file selected
 CHECKBOX:Monthly View
 KEY:Concept
 VALUE:Value
+BALANCE_COLUMN:Balance
+CONCEPT_COLUMN:Concept
+EXPENSES_COLUMN:Expenses
+DATE_COLUMN:Date

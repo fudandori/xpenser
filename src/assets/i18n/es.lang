@@ -6,3 +6,7 @@ SELECTED:Ningún archivo seleccionado
 CHECKBOX:Vista mensual
 KEY:Concepto
 VALUE:Valor
+BALANCE_COLUMN:Saldo
+CONCEPT_COLUMN:Concepto
+EXPENSES_COLUMN:Importe
+DATE_COLUMN:Fecha
