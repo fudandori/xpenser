@@ -86,6 +86,7 @@ public class Main extends Application {
 	private String conceptColumn;
 	private String expensesColumn;
 	private String dateColumn;
+	private String settings;
 	
 	@Override
 	public void start(Stage primaryStage) {
@@ -112,7 +113,7 @@ public class Main extends Application {
 		HBox secondRow = new HBox(10d, startButton, checkBox);
 		secondRow.setAlignment(Pos.CENTER_LEFT);
 
-		main.getChildren().addAll(firstRow, secondRow, new Label());
+		main.getChildren().addAll(firstRow, secondRow);
 		main.setPadding(padding);
 
 		Scene scene = new Scene(main, INITIAL_WIDTH, INITIAL_HEIGHT);
@@ -161,13 +162,14 @@ public class Main extends Application {
 		grids = new ArrayList<>();
 	}
 
-	private void setLanguage(String lang) {
+	private void translate(String lang) {
 		try {
 
 			Map<String, String> translation = LanguageService.getWords(lang);
 
 			selectFileButton.setText(translation.get("LOAD"));
 			startButton.setText(translation.get("START"));
+			configButton.setText(translation.get("SETTINGS"));
 			errorContent = translation.get("ERROR_BODY");
 			errorTite = translation.get("ERROR_TITLE");
 			if(file == null) fileLabel.setText(translation.get("SELECTED"));
@@ -178,6 +180,7 @@ public class Main extends Application {
 			conceptColumn = translation.get("CONCEPT_COLUMN");
 			dateColumn = translation.get("DATE_COLUMN");
 			expensesColumn = translation.get("EXPENSES_COLUMN");
+			settings = translation.get("SETTINGS");
 			
 		} catch (IOException e) {
 			System.out.println("i18n error");
@@ -234,7 +237,7 @@ public class Main extends Application {
 			scrollPane.opacityProperty().set(0d);
 			scrollPane.opacityProperty().bind(fadeIn.progressProperty());
 			scrollPane.setContent(grid);
-
+			scrollPane.setMaxHeight(Double.MAX_VALUE);
 			main.getChildren().add(scrollPane);
 
 			grids = new ArrayList<>();
@@ -331,7 +334,10 @@ public class Main extends Application {
 		return new EventHandler<MouseEvent>() {
 
 			public void handle(MouseEvent event) {
-				main.getChildren().remove(main.getChildren().size() - 1);
+
+				if(main.getChildren().size() > 2) {
+						main.getChildren().remove(main.getChildren().size() - 1);
+				}
 
 				int balance = config.get("BALANCE_COLUMN").intValue();
 				int concept = config.get("CONCEPT_COLUMN").intValue();
@@ -341,13 +347,13 @@ public class Main extends Application {
 				Processor p = new Processor(file, balance, concept, expenses, date);
 				AnimationTimer fadeIn = new AnimationTimer(500);
 				
-				if (!checkBox.isSelected()) {
+				if (checkBox.isSelected()) {
 
-					showSingleData(p, fadeIn);
+					showMultipleData(p, fadeIn);
 					
 				} else {
 
-					showMultipleData(p, fadeIn);
+					showSingleData(p, fadeIn);
 
 				}
 			}
@@ -359,7 +365,7 @@ public class Main extends Application {
 
 			@Override
 			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-				setLanguage(langs[newValue.intValue()].getCode());
+				translate(langs[newValue.intValue()].getCode());
 			}
 
 		};
@@ -404,5 +410,9 @@ public class Main extends Application {
 
 	public String getDateColumn() {
 		return dateColumn;
+	}
+	
+	public String getSettings() {
+		return settings;
 	}
 }
