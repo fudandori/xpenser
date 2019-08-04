@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
@@ -20,21 +19,23 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 public class Processor {
 
-	private int balanceColumn = 5;
-	private int conceptColumn = 2;
-	private int expensesColumn = 3;
-	private int dateColumn = 0;
+	private int balanceColumn;
+	private int conceptColumn;
+	private int expensesColumn;
+	private int dateColumn;
+	private int startRow;
 	
 	private File file;
 	private String balance;
 	private String lastBalance;
 	
-	public Processor(File file, int balance, int concept, int expenses, int date) {
+	public Processor(File file, int balance, int concept, int expenses, int date, int startRow) {
 		this.file = file;
 		this.balanceColumn = balance;
 		this.conceptColumn = concept;
 		this.expensesColumn = expenses;
 		this.dateColumn = date;
+		this.startRow = startRow;
 	}
 
 	public Map<String, Float> process() throws Exception {
@@ -68,7 +69,7 @@ public class Processor {
 	private Map<String, Float> getMap(Row row, Map<String, Map<String, Float>> source) {
 		Map<String, Float> result = null;
 
-		if (row.getRowNum() > 0) {
+		if (row.getRowNum() >= startRow - 1) {
 
 			String date = getCellValue(row, dateColumn).substring(0, 7) + "-01";
 
@@ -86,8 +87,12 @@ public class Processor {
 		return input.entrySet()
 				.stream()
 				.sorted(Map.Entry.comparingByKey())
-				.collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue(), (e1, e2) -> e2,
-						LinkedHashMap<String, Map<String, Float>>::new));
+				.collect(Collectors.toMap(
+							e -> e.getKey(),
+							e -> e.getValue(),
+							(e1, e2) -> e2,
+							LinkedHashMap<String, Map<String, Float>>::new
+						));
 	}
 	
 	private static float round(float d) {
@@ -123,37 +128,40 @@ public class Processor {
 	}
 	
 	private void map(Row row, Map<String, Float> map) {
-		balance = getCellValue(row, balanceColumn);
 
-		if (row.getRowNum() > 0 && !balance.equals(lastBalance)) {
+		boolean inRange = row.getRowNum() >= startRow - 1;
 
-			lastBalance = balance;
+		if (inRange) {
 
-			String concept = getCellValue(row, conceptColumn);
-			
-			boolean isAmazon = Pattern
-								.compile("(TJ-)?((AMZN MKTP ES)|(AMAZON.ES))", Pattern.CASE_INSENSITIVE)
-								.matcher(concept)
-								.lookingAt();
-			
-			boolean isDominos = Pattern
-								.compile("(TJ-)?DOMINOS PIZZA", Pattern.CASE_INSENSITIVE)
-								.matcher(concept)
-								.lookingAt();
-			
-			boolean isTelepizza = Pattern
-					.compile(".*TELEPIZZA.*", Pattern.CASE_INSENSITIVE)
-					.matcher(concept)
-					.lookingAt();
-					
-			if(isAmazon) { concept = "Amazon"; }
-			else if (isTelepizza) { concept = "TELEPIZZA"; }
-			else if (isDominos) { concept = "DOMINOS PIZZA"; }
+			balance = getCellValue(row, balanceColumn);
+			boolean duplicate = balance.equals(lastBalance);
 
-			Float value = Float.parseFloat(getCellValue(row, expensesColumn));
-			Float total = map.containsKey(concept) ? value + map.get(concept) : value;
-			
-			map.put(concept, round(total));
+			if (!duplicate) {
+
+				lastBalance = balance;
+
+				String concept = getCellValue(row, conceptColumn);
+
+				/*
+				 * v1.1 boolean isAmazon = Pattern
+				 * .compile("(TJ-)?((AMZN MKTP ES)|(AMAZON.ES))", Pattern.CASE_INSENSITIVE)
+				 * .matcher(concept) .lookingAt();
+				 * 
+				 * boolean isDominos = Pattern .compile("(TJ-)?DOMINOS PIZZA",
+				 * Pattern.CASE_INSENSITIVE) .matcher(concept) .lookingAt();
+				 * 
+				 * boolean isTelepizza = Pattern .compile(".*TELEPIZZA.*",
+				 * Pattern.CASE_INSENSITIVE) .matcher(concept) .lookingAt();
+				 * 
+				 * if(isAmazon) { concept = "Amazon"; } else if (isTelepizza) { concept =
+				 * "TELEPIZZA"; } else if (isDominos) { concept = "DOMINOS PIZZA"; }
+				 */
+
+				Float value = Float.parseFloat(getCellValue(row, expensesColumn));
+				Float total = map.containsKey(concept) ? value + map.get(concept) : value;
+
+				map.put(concept, round(total));
+			}
 
 		}
 	}

@@ -11,3 +11,5 @@ CONCEPT_COLUMN:Concept
 EXPENSES_COLUMN:Expenses
 DATE_COLUMN:Date
 SETTINGS:Settings
+FIRST_ROW:First Row
+NO_BANK:No Bank Selected

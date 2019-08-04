@@ -8,13 +8,13 @@ import java.util.Map;
 
 public class LanguageService {
 
-	public static Map<String, String> getWords(String locale) throws IOException {
+	public static Map<String, String> getWords(String locale) {
 		
 		BufferedReader reader = getBuffer(locale);
 
 		return getMap(reader);
 	}
-
+	
 	private static BufferedReader getBuffer(String locale) {
 		InputStreamReader reader = new InputStreamReader(LanguageService.class.getClass().getResourceAsStream(getPath(locale)));
 		return new BufferedReader(reader);
@@ -27,17 +27,19 @@ public class LanguageService {
 		return "/assets/i18n/" + locale + ".lang";
 	}
 	
-	private static Map<String, String> getMap(BufferedReader reader) throws IOException {
+	private static Map<String, String> getMap(BufferedReader reader) {
 		Map<String, String> map = new HashMap<>();
 		
 		String line;
 		
-		while((line = reader.readLine()) != null) {
-			map.put(line.split(":")[0], line.split(":")[1]);
+		try (BufferedReader r = reader) {
+			while((line = r.readLine()) != null) {
+				map.put(line.split(":")[0], line.split(":")[1]);
+			}
+		} catch (IOException e) {
+			map.clear();
 		}
 		
-		reader.close();
-
 		return map;
 	}
 	

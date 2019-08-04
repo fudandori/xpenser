@@ -11,3 +11,5 @@ CONCEPT_COLUMN:Concepto
 EXPENSES_COLUMN:Importe
 DATE_COLUMN:Fecha
 SETTINGS:Ajustes
+FIRST_ROW:Primera línea
+NO_BANK:No se seleccionó banco

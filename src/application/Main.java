@@ -2,8 +2,10 @@ package application;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -70,27 +72,30 @@ public class Main extends Application {
 
 	private List<GridPane> grids;
 
-	private Label key;
-	private Label value;
+	private Label keyLabel;
+	private Label valueLabel;
 	private Label fileLabel;
+	public Label selectedLabel = new Label();
 
 	private String errorTite;
 	private String errorContent;
 
 	private double width;
 
-	public Label Test = new Label("TEST");
-	private Map<String, Integer> config;
-	
+	private Map<String, String> config;
+
 	private String balanceColumn;
 	private String conceptColumn;
 	private String expensesColumn;
 	private String dateColumn;
+	private String firstRow;
 	private String settings;
+
+	public boolean bankSelected = false;
 	
 	@Override
 	public void start(Stage primaryStage) {
-		updateConfig();
+
 		width = primaryStage.getWidth();
 
 		primaryStage.widthProperty().addListener((obs, oldVal, newVal) -> {
@@ -103,11 +108,14 @@ public class Main extends Application {
 		});
 
 		initializeControls(primaryStage);
+		i18n();
+		updateConfig();
 
 		Region region = new Region();
 		HBox.setHgrow(region, Priority.ALWAYS);
 
-		HBox firstRow = new HBox(10d, selectFileButton, fileLabel, region, Test, configButton, languageChoiceBox);
+		HBox firstRow = new HBox(10d, selectFileButton, fileLabel, region, selectedLabel, configButton,
+				languageChoiceBox);
 		firstRow.setAlignment(Pos.CENTER_LEFT);
 
 		HBox secondRow = new HBox(10d, startButton, checkBox);
@@ -120,7 +128,6 @@ public class Main extends Application {
 		scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 		scene.setFill(Color.BEIGE);
 
-		i18n();
 
 		primaryStage.setTitle("Xpenser");
 		primaryStage.getIcons().add(new Image("/assets/icon.png"));
@@ -150,40 +157,39 @@ public class Main extends Application {
 		configButton = new Button();
 		configButton.setOnMouseClicked(clickShow(stage, this));
 		languageChoiceBox = new ChoiceBox<Language>(FXCollections.observableArrayList(langs));
-		languageChoiceBox
-			.getSelectionModel()
-			.selectedIndexProperty()
-			.addListener(getChangeListener());
+		languageChoiceBox.getSelectionModel().selectedIndexProperty().addListener(getChangeListener());
 
-		key = new Label();
-		value = new Label();
+		keyLabel = new Label();
+		valueLabel = new Label();
 		fileLabel = new Label();
-		
+
 		grids = new ArrayList<>();
 	}
 
 	private void translate(String lang) {
-		try {
 
-			Map<String, String> translation = LanguageService.getWords(lang);
+		Map<String, String> translation = LanguageService.getWords(lang);
+
+		if (!translation.isEmpty()) {
 
 			selectFileButton.setText(translation.get("LOAD"));
 			startButton.setText(translation.get("START"));
 			configButton.setText(translation.get("SETTINGS"));
 			errorContent = translation.get("ERROR_BODY");
 			errorTite = translation.get("ERROR_TITLE");
-			if(file == null) fileLabel.setText(translation.get("SELECTED"));
+			if (file == null)
+				fileLabel.setText(translation.get("SELECTED"));
+			if (!bankSelected)
+				selectedLabel.setText(translation.get("NO_BANK"));
 			checkBox.setText(translation.get("CHECKBOX"));
-			key.setText(translation.get("KEY"));
-			value.setText(translation.get("VALUE"));
+			keyLabel.setText(translation.get("KEY"));
+			valueLabel.setText(translation.get("VALUE"));
 			balanceColumn = translation.get("BALANCE_COLUMN");
 			conceptColumn = translation.get("CONCEPT_COLUMN");
 			dateColumn = translation.get("DATE_COLUMN");
 			expensesColumn = translation.get("EXPENSES_COLUMN");
 			settings = translation.get("SETTINGS");
-			
-		} catch (IOException e) {
-			System.out.println("i18n error");
+			firstRow = translation.get("FIRST_ROW");
 		}
 	}
 
@@ -193,33 +199,27 @@ public class Main extends Application {
 				.entrySet()
 				.stream()
 				.sorted(Map.Entry.comparingByValue())
-				.collect(Collectors
-				.toMap(e -> e.getKey(), e -> e.getValue(), (e1, e2) -> e2, LinkedHashMap<String, Float>::new));
+				.collect(Collectors.toMap(
+						e -> e.getKey(),
+						e -> e.getValue(),
+						(e1, e2) -> e2,
+						LinkedHashMap<String, Float>::new));
 
 		GridPane gridpane = new GridPane();
 		gridpane.setHgap(10d);
 		gridpane.setVgap(10d);
 
 		if (legend) {
-			GridPane.setHalignment(key, HPos.RIGHT);
-			gridpane.add(key, 0, 0);
-			gridpane.add(value, 1, 0);
+			GridPane.setHalignment(keyLabel, HPos.RIGHT);
+			gridpane.add(keyLabel, 0, 0);
+			gridpane.add(valueLabel, 1, 0);
 		}
 
-		int rowCount = 1;
+		int rowIndex = 1;
 		for (Entry<String, Float> row : sorted.entrySet()) {
 
-			Label key = new Label(row.getKey());
-			Label value = new Label(Float.toString(row.getValue()));
-
-			gridpane.add(key, 0, rowCount);
-			GridPane.setHalignment(key, HPos.RIGHT);
-			GridPane.setHgrow(key, Priority.ALWAYS);
-
-			gridpane.add(value, 1, rowCount);
-			GridPane.setHalignment(value, HPos.LEFT);
-			GridPane.setHgrow(value, Priority.ALWAYS);
-			rowCount++;
+			Utility.addRow(gridpane, row, rowIndex);
+			rowIndex++;
 		}
 
 		gridpane.getColumnConstraints().addAll(new ColumnConstraints(width / 2d - 25d));
@@ -238,6 +238,7 @@ public class Main extends Application {
 			scrollPane.opacityProperty().bind(fadeIn.progressProperty());
 			scrollPane.setContent(grid);
 			scrollPane.setMaxHeight(Double.MAX_VALUE);
+			
 			main.getChildren().add(scrollPane);
 
 			grids = new ArrayList<>();
@@ -295,7 +296,7 @@ public class Main extends Application {
 		alert.setTitle(errorTite);
 		alert.show();
 	}
-	
+
 	private void i18n() {
 		String locale = Locale.getDefault().getLanguage();
 
@@ -312,13 +313,13 @@ public class Main extends Application {
 				found = true;
 			}
 		}
-		
+
 		languageChoiceBox.getSelectionModel().select(index);
 	}
-	
+
 	private EventHandler<MouseEvent> getSelectFileEvent(Stage stage) {
 		return new EventHandler<MouseEvent>() {
-			
+
 			public void handle(MouseEvent event) {
 				File selectedFile = fileChooser.showOpenDialog(stage);
 				if (selectedFile != null) {
@@ -335,31 +336,38 @@ public class Main extends Application {
 
 			public void handle(MouseEvent event) {
 
-				if(main.getChildren().size() > 2) {
+				if (bankSelected) {
+
+					if (main.getChildren().size() > 2) {
 						main.getChildren().remove(main.getChildren().size() - 1);
-				}
+					}
 
-				int balance = config.get("BALANCE_COLUMN").intValue();
-				int concept = config.get("CONCEPT_COLUMN").intValue();
-				int expenses = config.get("EXPENSES_COLUMN").intValue();
-				int date = config.get("DATE_COLUMN").intValue();
-				
-				Processor p = new Processor(file, balance, concept, expenses, date);
-				AnimationTimer fadeIn = new AnimationTimer(500);
-				
-				if (checkBox.isSelected()) {
+					int balance = Integer.parseInt(config.get("BALANCE_COLUMN"));
+					int concept = Integer.parseInt(config.get("CONCEPT_COLUMN"));
+					int expenses = Integer.parseInt(config.get("EXPENSES_COLUMN"));
+					int date = Integer.parseInt(config.get("DATE_COLUMN"));
+					int start = Integer.parseInt(config.get("START_ROW"));
 
-					showMultipleData(p, fadeIn);
-					
+					Processor p = new Processor(file, balance, concept, expenses, date, start);
+					AnimationTimer fadeIn = new AnimationTimer(500);
+
+					if (checkBox.isSelected()) {
+
+						showMultipleData(p, fadeIn);
+
+					} else {
+
+						showSingleData(p, fadeIn);
+
+					}
 				} else {
-
-					showSingleData(p, fadeIn);
-
+					//TODO Error no bank selected
+					System.out.println("Fuck you bitch");
 				}
 			}
 		};
 	}
-	
+
 	private ChangeListener<Number> getChangeListener() {
 		return new ChangeListener<Number>() {
 
@@ -370,7 +378,7 @@ public class Main extends Application {
 
 		};
 	}
-	
+
 	private EventHandler<MouseEvent> clickShow(Stage primary, Main context) {
 		return new EventHandler<MouseEvent>() {
 
@@ -381,21 +389,50 @@ public class Main extends Application {
 			}
 		};
 	}
-	
+
 	public void updateConfig() {
-		String line;
 		config = new HashMap<>();
-		
-		try (BufferedReader b = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/config.properties")))) {
-			while((line = b.readLine()) != null) {
-				String[] split = line.split("=");
-				config.put(split[0], Integer.parseInt(split[1]));
+
+		File configFile = new File(Utility.configPath);
+
+		if (existsConfig()) {
+			
+			try (BufferedReader b = new BufferedReader(new FileReader(configFile))) {
+
+				String line;
+				while ((line = b.readLine()) != null) {
+					String[] split = line.split("=");
+					config.put(split[0], split[1]);
+				}
+				
+				selectedLabel.setText(config.get("LABEL"));
+				bankSelected = true;
+			} catch (IOException e) {
+				// TODO error while loading config
+				String lang = languageChoiceBox
+						.getSelectionModel()
+						.getSelectedItem()
+						.getCode();
+				
+				String text = LanguageService
+						.getWords(lang)
+						.get("NO_BANK");
+				
+				selectedLabel.setText(text != null ? text : "");
+				bankSelected = false;
 			}
-		} catch (IOException e) {
-			config = null;
+		} else {
+			try {
+				
+				configFile.getParentFile().mkdirs();
+				configFile.createNewFile();
+				
+			} catch (IOException e) {
+				//TODO error while creating config file
+			}
 		}
 	}
-	
+
 	public String getBalanceColumn() {
 		return balanceColumn;
 	}
@@ -411,8 +448,25 @@ public class Main extends Application {
 	public String getDateColumn() {
 		return dateColumn;
 	}
-	
+
 	public String getSettings() {
 		return settings;
+	}
+
+	public String getFirstRow() {
+		return firstRow;
+	}
+	
+	private boolean existsConfig() {
+		long lineCount;
+		File file = new File(Utility.configPath);
+		
+		try {
+			 lineCount = Files.lines(Paths.get(Utility.configPath)).count();
+		} catch (IOException e) {
+			lineCount = 0;
+		}
+
+		return lineCount > 0 && file.exists();
 	}
 }
