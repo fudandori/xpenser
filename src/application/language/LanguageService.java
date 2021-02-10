@@ -4,9 +4,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class LanguageService {
+	
+	private LanguageService() {}
 
 	public static Map<String, String> getWords(String locale) {
 		
@@ -45,5 +48,15 @@ public class LanguageService {
 	
 	public static boolean existsLocale(String locale) {
 		return LanguageService.class.getClass().getResource("/assets/i18n/" + locale + ".lang") != null;
+	}
+	
+	public static String getLocale() {
+		String locale = Locale.getDefault().getLanguage();
+
+		if (!LanguageService.existsLocale(locale)) {
+			locale = "en";
+		}
+		
+		return locale;
 	}
 }

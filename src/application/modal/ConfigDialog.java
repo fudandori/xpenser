@@ -1,10 +1,6 @@
 package application.modal;
 
-import java.io.File;
-import java.io.PrintWriter;
-
-import application.Main;
-import application.Utility;
+import application.Ctx;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -27,6 +23,10 @@ import javafx.stage.Stage;
 
 public class ConfigDialog extends Stage {
 
+	private static final String MANUAL = "Manual";
+	private static final String EVO = "EVO";
+	private static final String CAIXA = "Caixabank";
+
 	private Label balance = new Label();
 	private Label concept = new Label();
 	private Label expenses = new Label();
@@ -45,79 +45,34 @@ public class ConfigDialog extends Stage {
 	private int dateValue;
 	private int startValue;
 
-	private String selected;
+	private String selected = null;
 
-	public ConfigDialog(Stage owner, Main context) {
+	Button b;
+
+	ToggleGroup toggleGroup;
+
+	RadioButton r1;
+	RadioButton r2;
+	RadioButton r3;
+
+	private boolean loading = true;
+	
+	public ConfigDialog(Stage owner) {
 		super();
 		setResizable(false);
 
 		initOwner(owner);
-		setTitle(context.getSettings());
+		setTitle(Ctx.settings);
 		initModality(Modality.APPLICATION_MODAL);
 
-		Button b = new Button("Aceptar");
-		b.setOnMouseClicked(new EventHandler<MouseEvent>() {
+		b = new Button("{Aceptar}");
+		b.setOnMouseClicked(save());
+		b.setDisable(true);
 
-			public void handle(MouseEvent event) {
-
-				boolean skip = false;
-
-				if ("Manual".equals(selected)) {
-
-					try {
-
-						balanceValue = Integer.parseInt(t1.getText());
-						conceptValue = Integer.parseInt(t2.getText());
-						expensesValue = Integer.parseInt(t3.getText());
-						dateValue = Integer.parseInt(t4.getText());
-
-					} catch (NumberFormatException e) {
-						skip = true;
-
-						Alert alert = new Alert(AlertType.ERROR);
-						alert.setTitle("Error");
-						alert.setContentText("Número no válido");
-						alert.setHeaderText(null);
-
-						Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
-
-						stage.getIcons().add(new Image(getClass().getResourceAsStream("/assets/icon.png")));
-
-						alert.show();
-					}
-				}
-
-				if (!skip) {
-
-					File f = new File(Utility.configPath);
-
-					try (PrintWriter writer = new PrintWriter(f)) {
-
-						writer.write("BALANCE_COLUMN=" + balanceValue + System.lineSeparator());
-						writer.write("CONCEPT_COLUMN=" + conceptValue + System.lineSeparator());
-						writer.write("EXPENSES_COLUMN=" + expensesValue + System.lineSeparator());
-						writer.write("DATE_COLUMN=" + dateValue + System.lineSeparator());
-						writer.write("START_ROW=" + startValue + System.lineSeparator());
-						writer.write("LABEL=" + selected + System.lineSeparator() );
-						writer.flush();
-
-						context.updateConfig();
-						context.selectedLabel.setText(selected);
-					} catch (Exception e) {
-
-					}
-
-					close();
-				}
-			}
-		});
-
-		Button c = new Button("Cerrar");
-		c.setOnMouseClicked(new EventHandler<MouseEvent>() {
-
-			public void handle(MouseEvent event) {
-				close();
-			}
+		Button c = new Button("{Cerrar}");
+		c.setOnMouseClicked(event -> {
+			selected = null;
+			close();
 		});
 
 		t1.setPrefWidth(50);
@@ -127,27 +82,27 @@ public class ConfigDialog extends Stage {
 		t5.setPrefWidth(50);
 
 		balance.setPrefWidth(100);
-		balance.setText(context.getBalanceColumn());
+		balance.setText(Ctx.balanceColumn);
 		concept.setPrefWidth(100);
-		concept.setText(context.getConceptColumn());
+		concept.setText(Ctx.conceptColumn);
 		expenses.setPrefWidth(100);
-		expenses.setText(context.getExpensesColumn());
+		expenses.setText(Ctx.expensesColumn);
 		date.setPrefWidth(100);
-		date.setText(context.getDateColumn());
+		date.setText(Ctx.dateColumn);
 		start.setPrefWidth(100);
-		start.setText(context.getFirstRow());
-		
+		start.setText(Ctx.firstRowText);
+
 		t1.setEditable(false);
 		t2.setEditable(false);
 		t3.setEditable(false);
 		t4.setEditable(false);
 		t5.setEditable(false);
 
-		RadioButton r1 = new RadioButton("EVO");
-		RadioButton r2 = new RadioButton("Caixabank");
-		RadioButton r3 = new RadioButton("Manual");
+		r1 = new RadioButton(EVO);
+		r2 = new RadioButton(CAIXA);
+		r3 = new RadioButton(MANUAL);
 
-		ToggleGroup toggleGroup = new ToggleGroup();
+		toggleGroup = new ToggleGroup();
 
 		r1.setToggleGroup(toggleGroup);
 		r2.setToggleGroup(toggleGroup);
@@ -157,43 +112,21 @@ public class ConfigDialog extends Stage {
 			selected = ((RadioButton) newVal).getText();
 
 			switch (selected) {
-
-			case "EVO":
-
-				balanceValue = 5;
-				conceptValue = 2;
-				expensesValue = 3;
-				dateValue = 0;
-				startValue = 2;
-				
-				predefine();
+			case EVO:
+				evo();
 				break;
-				
-			case "Caixabank":
 
-				balanceValue = 5;
-				conceptValue = 0;
-				expensesValue = 4;
-				dateValue = 1;
-				startValue = 4;
-
-				predefine();
+			case CAIXA:
+				caixa();
 				break;
-				
-			case "Manual":
-				t1.setEditable(true);
-				t2.setEditable(true);
-				t3.setEditable(true);
-				t4.setEditable(true);
-				t5.setEditable(true);
 
-				t1.setText("");
-				t2.setText("");
-				t3.setText("");
-				t4.setText("");
-				t5.setText("");
+			default:
+			case MANUAL:
+				manual();
 				break;
 			}
+
+			b.setDisable(false);
 
 		});
 
@@ -202,7 +135,7 @@ public class ConfigDialog extends Stage {
 		HBox h3 = new HBox(10d, expenses, t3);
 		HBox h4 = new HBox(10d, date, t4);
 		HBox h6 = new HBox(10d, start, t5);
-		
+
 		HBox h5 = new HBox(10d, b, c);
 		h5.setAlignment(Pos.BOTTOM_RIGHT);
 
@@ -224,6 +157,12 @@ public class ConfigDialog extends Stage {
 		Scene scene = new Scene(p, 200, 350, Color.WHITE);
 		setScene(scene);
 
+		load();
+	}
+
+	public String test() {
+		super.showAndWait();
+		return selected;
 	}
 
 	private void predefine() {
@@ -233,10 +172,129 @@ public class ConfigDialog extends Stage {
 		t4.setEditable(false);
 		t5.setEditable(false);
 
+		fillText();
+	}
+
+	private void fillText() {
 		t1.setText(Integer.toString(balanceValue));
 		t2.setText(Integer.toString(conceptValue));
 		t3.setText(Integer.toString(expensesValue));
 		t4.setText(Integer.toString(dateValue));
 		t5.setText(Integer.toString(startValue));
+	}
+
+	private EventHandler<MouseEvent> save() {
+		return event -> {
+
+			boolean skip = false;
+
+			if (MANUAL.equals(selected)) {
+
+				try {
+
+					balanceValue = Integer.parseInt(t1.getText());
+					conceptValue = Integer.parseInt(t2.getText());
+					expensesValue = Integer.parseInt(t3.getText());
+					dateValue = Integer.parseInt(t4.getText());
+					startValue = Integer.parseInt(t5.getText());
+
+				} catch (NumberFormatException e) {
+					skip = true;
+
+					Alert alert = new Alert(AlertType.ERROR);
+					alert.setTitle("Error");
+					alert.setContentText("Número no válido");
+					alert.setHeaderText(null);
+
+					Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+
+					stage.getIcons().add(new Image(getClass().getResourceAsStream("/assets/icon.png")));
+
+					alert.show();
+				}
+			}
+
+			if (!skip) {
+
+				Ctx.config.setParams(conceptValue, expensesValue, dateValue, startValue, balanceValue);
+				close();
+			}
+
+		};
+	}
+
+	private void load() {
+
+		String bank = Ctx.config.getBank();
+
+		if (bank != null) {
+			
+			RadioButton radio = null;
+			
+			switch (bank) {
+			case EVO:
+				radio = r1;
+				break;
+			case CAIXA:
+				radio = r2;
+				break;
+			case MANUAL:
+				balanceValue = Ctx.config.getBalance();
+				conceptValue = Ctx.config.getConcept();
+				expensesValue = Ctx.config.getExpenses();
+				dateValue = Ctx.config.getDate();
+				startValue = Ctx.config.getStart();
+				radio = r3;
+				break;
+			default:
+				break;
+			}
+
+			selected = bank;
+			toggleGroup.selectToggle(radio);
+			b.setDisable(false);
+		}
+		
+		loading = false;
+	}
+
+	private void evo() {
+		balanceValue = 5;
+		conceptValue = 2;
+		expensesValue = 3;
+		dateValue = 0;
+		startValue = 2;
+
+		predefine();
+	}
+
+	private void caixa() {
+		balanceValue = 5;
+		conceptValue = 0;
+		expensesValue = 4;
+		dateValue = 1;
+		startValue = 4;
+
+		predefine();
+	}
+
+	private void manual() {
+		t1.setEditable(true);
+		t2.setEditable(true);
+		t3.setEditable(true);
+		t4.setEditable(true);
+		t5.setEditable(true);
+
+		if (loading) {
+
+			fillText();
+
+		} else {
+			t1.setText("");
+			t2.setText("");
+			t3.setText("");
+			t4.setText("");
+			t5.setText("");
+		}
 	}
 }

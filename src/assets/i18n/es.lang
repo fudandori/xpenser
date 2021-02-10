@@ -13,3 +13,13 @@ DATE_COLUMN:Fecha
 SETTINGS:Ajustes
 FIRST_ROW:Primera línea
 NO_BANK:No se seleccionó banco
+GROUPS:Grupos
+SAVE:Guardar
+ADD:Nuevo grupo
+NAME:Nombre
+VALUE:Valor
+CONTAINS:Contiene
+STARTS:Comienza por
+ENDS:Termina en
+REMOVE:Eliminar
+REMOVED:ELIMINADO

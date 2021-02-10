@@ -1,26 +1,21 @@
 package application;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import application.animation.AnimationTimer;
 import application.language.Language;
 import application.language.LanguageService;
 import application.modal.ConfigDialog;
+import application.modal.GroupingDialog;
 import application.process.Processor;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
@@ -28,7 +23,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -54,19 +48,22 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class Main extends Application {
-	private final double INITIAL_HEIGHT = 600d;
-	private final double INITIAL_WIDTH = 800d;
-	private final Insets padding = new Insets(10d);
-	private final Language[] langs = { new Language("en", "English"), new Language("es", "Español") };
+	private static final double INITIAL_HEIGHT = 600d;
+	private static final double INITIAL_WIDTH = 800d;
+	
+	private static final Language[] langs = { new Language("en", "English"), new Language("es", "Español") };
 
-	private VBox main = new VBox(10d);
+	private VBox mainPane;
 
 	private File file;
 
 	private FileChooser fileChooser;
+	
 	private Button selectFileButton;
 	private Button startButton;
 	private Button configButton;
+	private Button groupingButton; 
+	
 	private CheckBox checkBox;
 	private ChoiceBox<Language> languageChoiceBox;
 
@@ -75,28 +72,106 @@ public class Main extends Application {
 	private Label keyLabel;
 	private Label valueLabel;
 	private Label fileLabel;
-	public Label selectedLabel = new Label();
+	private Label selectedLabel;
 
 	private String errorTite;
 	private String errorContent;
 
 	private double width;
-
-	private Map<String, String> config;
-
-	private String balanceColumn;
-	private String conceptColumn;
-	private String expensesColumn;
-	private String dateColumn;
-	private String firstRow;
-	private String settings;
-
-	public boolean bankSelected = false;
 	
 	@Override
 	public void start(Stage primaryStage) {
+		
+		Ctx.load();
+		initControls(primaryStage);
+		initLayout(primaryStage);
+		
+		primaryStage.show();
+	}
+
+	public static void main(String[] args) {
+		launch(args);
+	}
+	
+	private void initLayout(Stage primaryStage) {
+		
+		Region region = new Region();
+		HBox.setHgrow(region, Priority.ALWAYS);
+
+		HBox firstRow = new HBox(10d, selectFileButton, fileLabel, region, selectedLabel, configButton, groupingButton, languageChoiceBox);
+		firstRow.setAlignment(Pos.CENTER_LEFT);
+
+		HBox secondRow = new HBox(10d, startButton, checkBox);
+		secondRow.setAlignment(Pos.CENTER_LEFT);
+
+		mainPane = new VBox(10d, firstRow, secondRow);
+		mainPane.setPadding(Ctx.PADDING);
+		
+		Scene scene = new Scene(mainPane, INITIAL_WIDTH, INITIAL_HEIGHT);
+		scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+		scene.setFill(Color.BEIGE);
+		
+		primaryStage.setScene(scene);
+	}
+
+	private void initControls(Stage primaryStage) {
+
+		primaryStage.setTitle("Xpenser");
+		primaryStage.getIcons().add(new Image("/assets/icon.png"));
+		primaryStage.setOnCloseRequest(e -> Utility.saveConfig(Ctx.config));
 
 		width = primaryStage.getWidth();
+
+		checkBox = new CheckBox();
+
+		fileChooser = new FileChooser();
+		fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xls", "*.xlsx"));
+
+		selectFileButton = new Button();
+		selectFileButton.setOnMouseClicked(getSelectFileEvent(primaryStage));
+
+		startButton = new Button();
+		startButton.setDisable(true);
+		startButton.setOnMouseClicked(getStartEvent());
+
+		configButton = new Button();
+		configButton.setOnMouseClicked(event -> {
+			String selected = new ConfigDialog(primaryStage).test();
+			
+			if(selected != null) {
+				Ctx.config.setBank(selected);
+				selectedLabel.setText(selected);
+			}
+		});
+
+		groupingButton = new Button();
+		groupingButton.setOnMouseClicked(event -> new GroupingDialog(primaryStage).show());
+		
+		keyLabel = new Label();
+		valueLabel = new Label();
+		fileLabel = new Label();
+
+		final String locale = Ctx.config.getLang() != null
+				? Ctx.config.getLang()
+				: LanguageService.getLocale();
+		
+		int localeIndex = IntStream
+				.range(0, langs.length)
+				.filter(i -> langs[i].getCode().equals(locale))
+				.findFirst()
+				.getAsInt();
+		
+		String selectedLabelText = Ctx.config.getBank() != null
+				? Ctx.config.getBank() 
+				: LanguageService.getWords(locale).get("NO_BANK");
+		
+		selectedLabel = new Label(selectedLabelText);
+		
+		languageChoiceBox = new ChoiceBox<>(FXCollections.observableArrayList(langs));
+		languageChoiceBox.getSelectionModel().selectedIndexProperty().addListener(getChangeListener());
+		languageChoiceBox.getSelectionModel().select(localeIndex);
+		
+		grids = new ArrayList<>();
 
 		primaryStage.widthProperty().addListener((obs, oldVal, newVal) -> {
 			width = newVal.doubleValue();
@@ -106,90 +181,41 @@ public class Main extends Application {
 				gridpane.getColumnConstraints().addAll(new ColumnConstraints(width / 2d - 25d));
 			}
 		});
-
-		initializeControls(primaryStage);
-		i18n();
-		updateConfig();
-
-		Region region = new Region();
-		HBox.setHgrow(region, Priority.ALWAYS);
-
-		HBox firstRow = new HBox(10d, selectFileButton, fileLabel, region, selectedLabel, configButton,
-				languageChoiceBox);
-		firstRow.setAlignment(Pos.CENTER_LEFT);
-
-		HBox secondRow = new HBox(10d, startButton, checkBox);
-		secondRow.setAlignment(Pos.CENTER_LEFT);
-
-		main.getChildren().addAll(firstRow, secondRow);
-		main.setPadding(padding);
-
-		Scene scene = new Scene(main, INITIAL_WIDTH, INITIAL_HEIGHT);
-		scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
-		scene.setFill(Color.BEIGE);
-
-
-		primaryStage.setTitle("Xpenser");
-		primaryStage.getIcons().add(new Image("/assets/icon.png"));
-		primaryStage.setScene(scene);
-
-		primaryStage.show();
 	}
-
-	public static void main(String[] args) {
-		launch(args);
-	}
-
-	private void initializeControls(Stage stage) {
-
-		checkBox = new CheckBox();
-
-		fileChooser = new FileChooser();
-		fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xls", "*.xlsx"));
-
-		selectFileButton = new Button();
-		selectFileButton.setOnMouseClicked(getSelectFileEvent(stage));
-
-		startButton = new Button();
-		startButton.setDisable(true);
-		startButton.setOnMouseClicked(getStartEvent());
-
-		configButton = new Button();
-		configButton.setOnMouseClicked(clickShow(stage, this));
-		languageChoiceBox = new ChoiceBox<Language>(FXCollections.observableArrayList(langs));
-		languageChoiceBox.getSelectionModel().selectedIndexProperty().addListener(getChangeListener());
-
-		keyLabel = new Label();
-		valueLabel = new Label();
-		fileLabel = new Label();
-
-		grids = new ArrayList<>();
-	}
-
+	
 	private void translate(String lang) {
 
 		Map<String, String> translation = LanguageService.getWords(lang);
 
 		if (!translation.isEmpty()) {
 
+			if (!Ctx.config.hasBank()) selectedLabel.setText(translation.get("NO_BANK"));
+			
+			Ctx.groups = translation.get("GROUPS");
+			Ctx.balanceColumn = translation.get("BALANCE_COLUMN");
+			Ctx.conceptColumn = translation.get("CONCEPT_COLUMN");
+			Ctx.dateColumn = translation.get("DATE_COLUMN");
+			Ctx.expensesColumn = translation.get("EXPENSES_COLUMN");
+			Ctx.settings = translation.get("SETTINGS");
+			Ctx.firstRowText = translation.get("FIRST_ROW");
+			Ctx.save = translation.get("SAVE");
+			Ctx.add = translation.get("ADD");
+			Ctx.contains = translation.get("CONTAINS");
+			Ctx.startsWith = translation.get("STARTS");
+			Ctx.endsWith = translation.get("ENDS");
+			Ctx.remove= translation.get("REMOVE");
+			Ctx.removed= translation.get("REMOVED");
+			
 			selectFileButton.setText(translation.get("LOAD"));
 			startButton.setText(translation.get("START"));
 			configButton.setText(translation.get("SETTINGS"));
+			groupingButton.setText(Ctx.groups);
 			errorContent = translation.get("ERROR_BODY");
 			errorTite = translation.get("ERROR_TITLE");
-			if (file == null)
-				fileLabel.setText(translation.get("SELECTED"));
-			if (!bankSelected)
-				selectedLabel.setText(translation.get("NO_BANK"));
+			if (file == null) fileLabel.setText(translation.get("SELECTED"));
 			checkBox.setText(translation.get("CHECKBOX"));
 			keyLabel.setText(translation.get("KEY"));
 			valueLabel.setText(translation.get("VALUE"));
-			balanceColumn = translation.get("BALANCE_COLUMN");
-			conceptColumn = translation.get("CONCEPT_COLUMN");
-			dateColumn = translation.get("DATE_COLUMN");
-			expensesColumn = translation.get("EXPENSES_COLUMN");
-			settings = translation.get("SETTINGS");
-			firstRow = translation.get("FIRST_ROW");
 		}
 	}
 
@@ -200,8 +226,8 @@ public class Main extends Application {
 				.stream()
 				.sorted(Map.Entry.comparingByValue())
 				.collect(Collectors.toMap(
-						e -> e.getKey(),
-						e -> e.getValue(),
+						Entry::getKey,
+						Entry::getValue,
 						(e1, e2) -> e2,
 						LinkedHashMap<String, Float>::new));
 
@@ -239,7 +265,7 @@ public class Main extends Application {
 			scrollPane.setContent(grid);
 			scrollPane.setMaxHeight(Double.MAX_VALUE);
 			
-			main.getChildren().add(scrollPane);
+			mainPane.getChildren().add(scrollPane);
 
 			grids = new ArrayList<>();
 			grids.add(grid);
@@ -281,7 +307,7 @@ public class Main extends Application {
 				grids.add(grid);
 			}
 
-			main.getChildren().add(tabs);
+			mainPane.getChildren().add(tabs);
 
 			Thread animation = new Thread(fadeIn);
 			animation.start();
@@ -297,176 +323,57 @@ public class Main extends Application {
 		alert.show();
 	}
 
-	private void i18n() {
-		String locale = Locale.getDefault().getLanguage();
-
-		if (!LanguageService.existsLocale(locale)) {
-			locale = "en";
-		}
-
-		int index = -1;
-		boolean found = false;
-
-		for (int i = 0; i < langs.length && !found; i++) {
-			if (langs[i].getCode().equals(locale)) {
-				index = i;
-				found = true;
-			}
-		}
-
-		languageChoiceBox.getSelectionModel().select(index);
-	}
-
 	private EventHandler<MouseEvent> getSelectFileEvent(Stage stage) {
-		return new EventHandler<MouseEvent>() {
-
-			public void handle(MouseEvent event) {
-				File selectedFile = fileChooser.showOpenDialog(stage);
-				if (selectedFile != null) {
-					file = selectedFile;
-					fileLabel.setText(file.getName());
-					startButton.setDisable(false);
-				}
+		return event -> {
+			File selectedFile = fileChooser.showOpenDialog(stage);
+			if (selectedFile != null) {
+				file = selectedFile;
+				fileLabel.setText(file.getName());
+				startButton.setDisable(false);
 			}
 		};
 	}
 
 	private EventHandler<MouseEvent> getStartEvent() {
-		return new EventHandler<MouseEvent>() {
+		return event -> {
 
-			public void handle(MouseEvent event) {
+			if (Ctx.config.hasBank()) {
 
-				if (bankSelected) {
-
-					if (main.getChildren().size() > 2) {
-						main.getChildren().remove(main.getChildren().size() - 1);
-					}
-
-					int balance = Integer.parseInt(config.get("BALANCE_COLUMN"));
-					int concept = Integer.parseInt(config.get("CONCEPT_COLUMN"));
-					int expenses = Integer.parseInt(config.get("EXPENSES_COLUMN"));
-					int date = Integer.parseInt(config.get("DATE_COLUMN"));
-					int start = Integer.parseInt(config.get("START_ROW"));
-
-					Processor p = new Processor(file, balance, concept, expenses, date, start);
-					AnimationTimer fadeIn = new AnimationTimer(500);
-
-					if (checkBox.isSelected()) {
-
-						showMultipleData(p, fadeIn);
-
-					} else {
-
-						showSingleData(p, fadeIn);
-
-					}
-				} else {
-					//TODO Error no bank selected
-					System.out.println("Fuck you bitch");
+				if (mainPane.getChildren().size() > 2) {
+					mainPane.getChildren().remove(mainPane.getChildren().size() - 1);
 				}
+
+				int balance = Ctx.config.getBalance();
+				int concept = Ctx.config.getConcept();
+				int expenses = Ctx.config.getExpenses();
+				int date = Ctx.config.getDate();
+				int start = Ctx.config.getStart();
+
+				Processor p = new Processor(file, balance, concept, expenses, date, start);
+				AnimationTimer fadeIn = new AnimationTimer(500);
+
+				if (checkBox.isSelected()) {
+
+					showMultipleData(p, fadeIn);
+
+				} else {
+
+					showSingleData(p, fadeIn);
+
+				}
+			} else {
+				onFailAlert();
 			}
 		};
 	}
 
 	private ChangeListener<Number> getChangeListener() {
-		return new ChangeListener<Number>() {
-
-			@Override
-			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-				translate(langs[newValue.intValue()].getCode());
-			}
-
-		};
-	}
-
-	private EventHandler<MouseEvent> clickShow(Stage primary, Main context) {
-		return new EventHandler<MouseEvent>() {
-
-			public void handle(MouseEvent event) {
-				Stage stage = new ConfigDialog(primary, context);
-
-				stage.show();
-			}
-		};
-	}
-
-	public void updateConfig() {
-		config = new HashMap<>();
-
-		File configFile = new File(Utility.configPath);
-
-		if (existsConfig()) {
+		return (ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
 			
-			try (BufferedReader b = new BufferedReader(new FileReader(configFile))) {
-
-				String line;
-				while ((line = b.readLine()) != null) {
-					String[] split = line.split("=");
-					config.put(split[0], split[1]);
-				}
-				
-				selectedLabel.setText(config.get("LABEL"));
-				bankSelected = true;
-			} catch (IOException e) {
-				// TODO error while loading config
-				String lang = languageChoiceBox
-						.getSelectionModel()
-						.getSelectedItem()
-						.getCode();
-				
-				String text = LanguageService
-						.getWords(lang)
-						.get("NO_BANK");
-				
-				selectedLabel.setText(text != null ? text : "");
-				bankSelected = false;
-			}
-		} else {
-			try {
-				
-				configFile.getParentFile().mkdirs();
-				configFile.createNewFile();
-				
-			} catch (IOException e) {
-				//TODO error while creating config file
-			}
-		}
-	}
-
-	public String getBalanceColumn() {
-		return balanceColumn;
-	}
-
-	public String getConceptColumn() {
-		return conceptColumn;
-	}
-
-	public String getExpensesColumn() {
-		return expensesColumn;
-	}
-
-	public String getDateColumn() {
-		return dateColumn;
-	}
-
-	public String getSettings() {
-		return settings;
-	}
-
-	public String getFirstRow() {
-		return firstRow;
-	}
-	
-	private boolean existsConfig() {
-		long lineCount;
-		File file = new File(Utility.configPath);
-		
-		try {
-			 lineCount = Files.lines(Paths.get(Utility.configPath)).count();
-		} catch (IOException e) {
-			lineCount = 0;
-		}
-
-		return lineCount > 0 && file.exists();
+			String locale =  langs[newValue.intValue()].getCode();
+			
+			translate(locale);
+			Ctx.config.setLang(locale);
+		};
 	}
 }

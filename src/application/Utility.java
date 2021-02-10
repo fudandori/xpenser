@@ -1,7 +1,15 @@
 package application;
 
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Map.Entry;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonIOException;
+import com.google.gson.stream.JsonReader;
 
 import javafx.geometry.HPos;
 import javafx.scene.control.Label;
@@ -12,6 +20,8 @@ import javafx.scene.layout.Priority;
  * Support functions and variables for Xpender
  */
 public final class Utility {
+	
+	private Utility() {}
 	
 	/**
 	 * Path pointing to the config file inside the user's home folder
@@ -37,5 +47,59 @@ public final class Utility {
 		GridPane.setHgrow(value, Priority.ALWAYS);
 	}
 	
+	static Config getConfig() {
+		
+		Config config = new Config();
+		
+		File configFile = new File(configPath);
+		
+		Gson gson = new GsonBuilder()
+				.setPrettyPrinting()
+				.serializeNulls()
+				.create();
+
+		if(configFile.exists()) {
+			
+			try {
+				config = gson.fromJson(new JsonReader(new FileReader(configFile)), Config.class);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else {
+			config.setBalance((byte) 0);
+			config.setConcept((byte) 0);
+			config.setDate((byte) 0);
+		}
+		
+		return config;
+		
+	}
 	
+	static void saveConfig(Config config) {
+		
+		File configFolder = new File(configPath).getParentFile();
+		
+		if(!configFolder.exists()) {
+			configFolder.mkdirs();
+		}
+		
+		try (FileWriter writer = new FileWriter(configPath)){
+			new GsonBuilder()
+					.setPrettyPrinting()
+					.serializeNulls()
+					.create()
+					.toJson(config, writer);
+		} catch (JsonIOException | IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static void saveLang(String locale) {
+		
+		Config config = getConfig();
+		
+		config.setLang(locale);
+		
+		saveConfig(config);
+	}
 }

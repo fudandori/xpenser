@@ -13,3 +13,13 @@ DATE_COLUMN:Date
 SETTINGS:Settings
 FIRST_ROW:First Row
 NO_BANK:No Bank Selected
+GROUPS:Groups
+SAVE:Save
+ADD:New Group
+NAME:Name
+VALUE:Value
+CONTAINS:Contains
+ENDS:Ends with
+STARTS:Starts with
+REMOVED:REMOVED
+REMOVE:Remove
