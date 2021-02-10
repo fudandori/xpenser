@@ -1,6 +1,13 @@
-# Xpenser - JavaFX - UNDER DEVELOPMENT
-FMI:
-- Custom grouping
-- Remember language choice
-- Preselected bank option on config dialog
-[v0.1.2-BETA](https://drive.google.com/drive/folders/1BrTKXuvpV9AEpvB1LNr0v9roqsA_NKmz?usp=sharing)
+# Xpenser - JavaFX
+## Bank expenses' sheet helper tool
+v1.0.1
+
+* Groups concepts by name and sums its quantities
+* Detailed view in bulk or grouped by month
+* Presets for different banks (more coming in the future)
+* Custom parsing configuration
+* Custom concept grouping
+* Multilanguage
+* Real time config settings auto-saving
+
+*Requires Java 8 to run*
