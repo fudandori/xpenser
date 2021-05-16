@@ -1,4 +1,4 @@
-package application;
+package com.fudandori.xpenser.v2;
 
 import java.io.File;
 import java.time.LocalDate;
@@ -11,12 +11,13 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import application.animation.AnimationTimer;
-import application.language.Language;
-import application.language.LanguageService;
-import application.modal.ConfigDialog;
-import application.modal.GroupingDialog;
-import application.process.Processor;
+import com.fudandori.xpenser.v2.animation.AnimationTimer;
+import com.fudandori.xpenser.v2.language.Language;
+import com.fudandori.xpenser.v2.language.LanguageService;
+import com.fudandori.xpenser.v2.modal.ConfigDialog;
+import com.fudandori.xpenser.v2.modal.GroupingDialog;
+import com.fudandori.xpenser.v2.process.Processor;
+
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -51,7 +52,7 @@ public class Main extends Application {
 	private static final double INITIAL_HEIGHT = 600d;
 	private static final double INITIAL_WIDTH = 800d;
 	
-	private static final Language[] langs = { new Language("en", "English"), new Language("es", "Español") };
+	private static final Language[] langs = { new Language("en", "English"), new Language("es", "Espaï¿½ol") };
 
 	private VBox mainPane;
 

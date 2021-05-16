@@ -1,4 +1,4 @@
-package application.process;
+package com.fudandori.xpenser.v2.process;
 
 public class Group {
 	private String name;

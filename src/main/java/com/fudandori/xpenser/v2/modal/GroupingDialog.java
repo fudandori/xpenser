@@ -1,12 +1,11 @@
-package application.modal;
+package com.fudandori.xpenser.v2.modal;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.gson.Gson;
+import com.fudandori.xpenser.v2.Ctx;
+import com.fudandori.xpenser.v2.process.Group;
 
-import application.Ctx;
-import application.process.Group;
 import javafx.collections.FXCollections;
 import javafx.geometry.HPos;
 import javafx.geometry.Pos;

@@ -1,9 +1,9 @@
-package application;
+package com.fudandori.xpenser.v2;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import application.process.Group;
+import com.fudandori.xpenser.v2.process.Group;
 
 public class Config {
 

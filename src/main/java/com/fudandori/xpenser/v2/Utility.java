@@ -1,4 +1,4 @@
-package application;
+package com.fudandori.xpenser.v2;
 
 import java.io.File;
 import java.io.FileReader;

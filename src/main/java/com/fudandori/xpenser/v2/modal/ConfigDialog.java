@@ -1,6 +1,7 @@
-package application.modal;
+package com.fudandori.xpenser.v2.modal;
 
-import application.Ctx;
+import com.fudandori.xpenser.v2.Ctx;
+
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -203,7 +204,7 @@ public class ConfigDialog extends Stage {
 
 					Alert alert = new Alert(AlertType.ERROR);
 					alert.setTitle("Error");
-					alert.setContentText("Número no válido");
+					alert.setContentText("Nï¿½mero no vï¿½lido");
 					alert.setHeaderText(null);
 
 					Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();

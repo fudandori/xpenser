@@ -1,4 +1,4 @@
-package application;
+package com.fudandori.xpenser.v2;
 
 import javafx.geometry.Insets;
 

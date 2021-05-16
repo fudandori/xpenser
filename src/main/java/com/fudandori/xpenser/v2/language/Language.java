@@ -1,4 +1,4 @@
-package application.language;
+package com.fudandori.xpenser.v2.language;
 
 public class Language {
 

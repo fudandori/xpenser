@@ -1,4 +1,4 @@
-package application.animation;
+package com.fudandori.xpenser.v2.animation;
 
 import javafx.concurrent.Task;
 
