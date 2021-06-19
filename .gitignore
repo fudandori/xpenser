@@ -7,4 +7,6 @@
 !/src/**
 # You can be specific with these rules
 !.gitignore
+!pom.xml
 bin
+target
