@@ -52,7 +52,7 @@ public class Main extends Application {
 	private static final double INITIAL_HEIGHT = 600d;
 	private static final double INITIAL_WIDTH = 800d;
 	
-	private static final Language[] langs = { new Language("en", "English"), new Language("es", "Espa�ol") };
+	private static final Language[] langs = { new Language("en", "English"), new Language("es", "Español") };
 
 	private VBox mainPane;
 
@@ -137,7 +137,7 @@ public class Main extends Application {
 
 		configButton = new Button();
 		configButton.setOnMouseClicked(event -> {
-			String selected = new ConfigDialog(primaryStage).test();
+			String selected = new ConfigDialog(primaryStage).init();
 			
 			if(selected != null) {
 				Ctx.config.setBank(selected);
@@ -206,7 +206,8 @@ public class Main extends Application {
 			Ctx.endsWith = translation.get("ENDS");
 			Ctx.remove= translation.get("REMOVE");
 			Ctx.removed= translation.get("REMOVED");
-			
+			Ctx.close = translation.get("CLOSE");
+					
 			selectFileButton.setText(translation.get("LOAD"));
 			startButton.setText(translation.get("START"));
 			configButton.setText(translation.get("SETTINGS"));

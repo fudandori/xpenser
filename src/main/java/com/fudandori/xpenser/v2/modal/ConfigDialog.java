@@ -48,7 +48,7 @@ public class ConfigDialog extends Stage {
 
 	private String selected = null;
 
-	Button b;
+	Button saveButton;
 
 	ToggleGroup toggleGroup;
 
@@ -64,14 +64,15 @@ public class ConfigDialog extends Stage {
 
 		initOwner(owner);
 		setTitle(Ctx.settings);
+		getIcons().add(new Image("/assets/cog.png"));
 		initModality(Modality.APPLICATION_MODAL);
 
-		b = new Button("{Aceptar}");
-		b.setOnMouseClicked(save());
-		b.setDisable(true);
+		saveButton = new Button(Ctx.save);
+		saveButton.setOnMouseClicked(save());
+		saveButton.setDisable(true);
 
-		Button c = new Button("{Cerrar}");
-		c.setOnMouseClicked(event -> {
+		Button closeButton = new Button(Ctx.close);
+		closeButton.setOnMouseClicked(event -> {
 			selected = null;
 			close();
 		});
@@ -109,27 +110,28 @@ public class ConfigDialog extends Stage {
 		r2.setToggleGroup(toggleGroup);
 		r3.setToggleGroup(toggleGroup);
 
-		toggleGroup.selectedToggleProperty().addListener((observable, oldVal, newVal) -> {
-			selected = ((RadioButton) newVal).getText();
-
-			switch (selected) {
-			case EVO:
-				evo();
-				break;
-
-			case CAIXA:
-				caixa();
-				break;
-
-			default:
-			case MANUAL:
-				manual();
-				break;
-			}
-
-			b.setDisable(false);
-
-		});
+		toggleGroup
+			.selectedToggleProperty()
+			.addListener((observable, oldVal, newVal) -> {
+				selected = ((RadioButton) newVal).getText();
+	
+				switch (selected) {
+				case EVO:
+					evo();
+					break;
+	
+				case CAIXA:
+					caixa();
+					break;
+	
+				default:
+				case MANUAL:
+					manual();
+					break;
+				}
+	
+				saveButton.setDisable(false);
+			});
 
 		HBox h1 = new HBox(10d, balance, t1);
 		HBox h2 = new HBox(10d, concept, t2);
@@ -137,31 +139,31 @@ public class ConfigDialog extends Stage {
 		HBox h4 = new HBox(10d, date, t4);
 		HBox h6 = new HBox(10d, start, t5);
 
-		HBox h5 = new HBox(10d, b, c);
+		HBox h5 = new HBox(10d, saveButton, closeButton);
 		h5.setAlignment(Pos.BOTTOM_RIGHT);
 
-		VBox bs = new VBox(h5);
-		bs.setPadding(new Insets(10d));
-		bs.setAlignment(Pos.BOTTOM_CENTER);
-		VBox.setVgrow(bs, Priority.ALWAYS);
+		VBox buttonBox = new VBox(h5);
+		buttonBox.setPadding(new Insets(10d));
+		buttonBox.setAlignment(Pos.BOTTOM_CENTER);
+		VBox.setVgrow(buttonBox, Priority.ALWAYS);
 
-		VBox r = new VBox(10d, r1, r2, r3);
-		r.setPadding(new Insets(10d));
-		r.setAlignment(Pos.BASELINE_LEFT);
+		VBox radioBox = new VBox(10d, r1, r2, r3);
+		radioBox.setPadding(new Insets(10d));
+		radioBox.setAlignment(Pos.BASELINE_LEFT);
 
-		VBox v = new VBox(10d, h1, h2, h3, h4, h6);
-		v.setPadding(new Insets(10d));
-		v.setAlignment(Pos.CENTER);
+		VBox textFieldBox = new VBox(10d, h1, h2, h3, h4, h6);
+		textFieldBox.setPadding(new Insets(10d));
+		textFieldBox.setAlignment(Pos.CENTER);
 
-		VBox p = new VBox(r, v, bs);
+		VBox wrapperBox = new VBox(radioBox, textFieldBox, buttonBox);
 
-		Scene scene = new Scene(p, 200, 350, Color.WHITE);
+		Scene scene = new Scene(wrapperBox, 200, 350, Color.WHITE);
 		setScene(scene);
 
 		load();
 	}
 
-	public String test() {
+	public String init() {
 		super.showAndWait();
 		return selected;
 	}
@@ -204,7 +206,7 @@ public class ConfigDialog extends Stage {
 
 					Alert alert = new Alert(AlertType.ERROR);
 					alert.setTitle("Error");
-					alert.setContentText("N�mero no v�lido");
+					alert.setContentText("Número no válido");
 					alert.setHeaderText(null);
 
 					Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
@@ -253,7 +255,7 @@ public class ConfigDialog extends Stage {
 
 			selected = bank;
 			toggleGroup.selectToggle(radio);
-			b.setDisable(false);
+			saveButton.setDisable(false);
 		}
 		
 		loading = false;

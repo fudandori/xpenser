@@ -26,7 +26,8 @@ public class Ctx {
 	public static String contains;
 	public static String removed;
 	public static String remove;
-	
+	public static String close;
+
 	public static void load() {
 		config = Utility.getConfig();
 	}

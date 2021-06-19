@@ -1,8 +1,8 @@
 LOAD:Cargar fichero
 START:Procesar
-ERROR_BODY:Error en el parseo de los datos. Asegúrese de que los parámetros son correctos.
+ERROR_BODY:Error en el parseo de los datos. AsegÃºrese de que los parÃ¡metros son correctos.
 ERROR_TITLE:Error de procesamiento
-SELECTED:Ningún archivo seleccionado
+SELECTED:NingÃºn archivo seleccionado
 CHECKBOX:Vista mensual
 KEY:Concepto
 VALUE:Valor
@@ -11,8 +11,8 @@ CONCEPT_COLUMN:Concepto
 EXPENSES_COLUMN:Importe
 DATE_COLUMN:Fecha
 SETTINGS:Ajustes
-FIRST_ROW:Primera línea
-NO_BANK:No se seleccionó banco
+FIRST_ROW:Primera lÃ­nea
+NO_BANK:No se seleccionÃ³ banco
 GROUPS:Grupos
 SAVE:Guardar
 ADD:Nuevo grupo
@@ -23,3 +23,4 @@ STARTS:Comienza por
 ENDS:Termina en
 REMOVE:Eliminar
 REMOVED:ELIMINADO
+CLOSE:Cerrar

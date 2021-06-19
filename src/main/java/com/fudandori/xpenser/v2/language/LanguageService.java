@@ -3,6 +3,7 @@ package com.fudandori.xpenser.v2.language;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -19,7 +20,7 @@ public class LanguageService {
 	}
 	
 	private static BufferedReader getBuffer(String locale) {
-		InputStreamReader reader = new InputStreamReader(LanguageService.class.getClass().getResourceAsStream(getPath(locale)));
+		InputStreamReader reader = new InputStreamReader(LanguageService.class.getResourceAsStream(getPath(locale)), StandardCharsets.UTF_8);
 		return new BufferedReader(reader);
 	}
 	
@@ -47,7 +48,7 @@ public class LanguageService {
 	}
 	
 	public static boolean existsLocale(String locale) {
-		return LanguageService.class.getClass().getResource("/assets/i18n/" + locale + ".lang") != null;
+		return LanguageService.class.getResource("/assets/i18n/" + locale + ".lang") != null;
 	}
 	
 	public static String getLocale() {

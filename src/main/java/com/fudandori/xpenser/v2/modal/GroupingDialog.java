@@ -15,6 +15,7 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -43,6 +44,7 @@ public class GroupingDialog extends Stage {
 
 		initOwner(owner);
 		setTitle(Ctx.groups);
+		getIcons().add(new Image("/assets/group.png"));
 		initModality(Modality.APPLICATION_MODAL);
 
 		gridpane = new GridPane();
